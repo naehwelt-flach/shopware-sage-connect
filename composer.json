@@ -1,5 +1,9 @@
 {
     "name": "naehwelt/shopware-sage-connect",
+    "description": "Sage 100 Connect integration for Shopware 6",
+    "authors": [
+        {"name": "Naehwelt Flach GmbH"}
+    ],
     "type": "shopware-platform-plugin",
     "version": "1.0.0",
     "license": "MIT",
@@ -9,8 +13,8 @@
     "extra": {
         "shopware-plugin-class": "Naehwelt\\Shopware\\SageConnect",
         "label": {
-            "de-DE": "Sage (100) Connect",
-            "en-GB": "Sage (100) Connect"
+            "de-DE": "Sage (100) Connect für Shopware 6",
+            "en-GB": "Sage (100) Connect for Shopware 6"
         }
     },
     "autoload": {
