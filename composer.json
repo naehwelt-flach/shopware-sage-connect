@@ -1,0 +1,26 @@
+{
+    "name": "naehwelt/shopware-sage-connect",
+    "type": "shopware-platform-plugin",
+    "version": "1.0.0",
+    "license": "MIT",
+    "require": {
+        "shopware/core": "~6.6.0"
+    },
+    "extra": {
+        "shopware-plugin-class": "Naehwelt\\Shopware\\SageConnect",
+        "label": {
+            "de-DE": "Sage (100) Connect",
+            "en-GB": "Sage (100) Connect"
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Naehwelt\\Shopware\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Naehwelt\\Shopware\\Tests\\": "tests/"
+        }
+    }
+}
