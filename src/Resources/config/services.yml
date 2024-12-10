@@ -6,7 +6,7 @@ services:
 
   Naehwelt\Shopware\ImportExport\TaskHandler:
     arguments:
-      - scheduled_task.repository
-      - monolog.logger
+      - '@scheduled_task.repository'
+      - '@monolog.logger'
     tags:
       - messenger.message_handler
