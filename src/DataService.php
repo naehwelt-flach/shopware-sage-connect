@@ -78,13 +78,16 @@ readonly class DataService
             'mapping' => [...$mapping([
                 'name' => ['key' => 'technicalName', 'requiredByUser' => true],
                 'label' => 'translations.DEFAULT.label',
+                'mapping' => 'mapping',
+                'config' => 'config',
+                'update_by' => 'updateBy',
                 'source_entity' => 'sourceEntity',
                 'file_type' => ['key' => 'fileType', 'useDefaultValue' => true, 'defaultValue' => 'text/csv'],
                 'delimiter' => ['useDefaultValue' => true, 'defaultValue' => ';'],
                 'enclosure' => ['useDefaultValue' => true, 'defaultValue' => '"'],
             ])],
-            'updatedBy' => [
-                ['mappedKey' => 'name', 'entityName' => ImportExportProfileDefinition::ENTITY_NAME],
+            'updateBy' => [
+                ['mappedKey' => 'technicalName', 'entityName' => ImportExportProfileDefinition::ENTITY_NAME],
             ],
             'config' => ['createEntities' => true, 'updateEntities' => true],
         ] + $default;
