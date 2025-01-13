@@ -56,9 +56,7 @@ readonly class DataService
     {
         static $default = [
             'systemDefault' => false,
-            'fileType' => 'text/csv',
-            'delimiter' => ';',
-            'enclosure' => '"',
+            'fileType' => 'text/yaml',
         ];
         $mapping = static function (iterable $mapping) {
             $i = 0;
