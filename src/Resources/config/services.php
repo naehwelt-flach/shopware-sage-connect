@@ -7,7 +7,21 @@ use Shopware\Core\Framework\Api\Controller\SyncController;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
 
 return static function(ContainerConfigurator $container): void {
-    $container->services()->defaults()->autowire()->autoconfigure()
+    $services = $container->services()->defaults()->autowire()->autoconfigure();
+
+    $set = function ($id, $class = null, array $args = []) use ($services) : string|ServiceConfigurator {
+        if (is_array($class)) {
+            return $services->set($id)->args($class);
+        }
+        if ($class === null) {
+            return $services->set($id)->args($args);
+        }
+
+        $services->set($id, $class)->args($args);
+        return $id;
+    };
+
+    $services
         ->set(ImportExport\Task::class)
             ->tag('shopware.scheduled.task')
 
@@ -31,18 +45,26 @@ return static function(ContainerConfigurator $container): void {
                 service('import_export_file.repository'),
             ])
 
-        ->set(ImportExport\YamlFileWriter::class)
+        ->set(ImportExport\YamlFileHandler::class)
+            ->args([service(DefinitionInstanceRegistry::class)])
+
+        ->set(ImportExport\WriterFactory::class)
             ->args([
-                service('shopware.filesystem.private'),
-                service(DefinitionInstanceRegistry::class),
+                ['application/x-yaml', 'text/yaml'],
+                service_closure($set('sc.yaml.writer', ImportExport\FileWriter::class, [
+                    service('shopware.filesystem.private'),
+                    service(ImportExport\YamlFileHandler::class)
+                ]))
             ])
-        ->set('sc.writer_factory.yaml', ImportExport\WriterFactory::class)
-            ->args(['text/yaml', service_closure(ImportExport\YamlFileWriter::class)])
             ->tag('shopware.import_export.writer_factory')
 
-        ->set(ImportExport\YamlReader::class)
-        ->set('sc.reader_factory.yaml', ImportExport\ReaderFactory::class)
-            ->args(['text/yaml', service_closure(ImportExport\YamlReader::class)])
+        ->set(ImportExport\ReaderFactory::class)
+            ->args([
+                ['application/x-yaml', 'text/yaml'],
+                service_closure($set('sc.yaml.reader', ImportExport\FileReader::class, [
+                    service(ImportExport\YamlFileHandler::class)
+                ]))
+            ])
             ->tag('shopware.import_export.reader_factory')
 
     ;

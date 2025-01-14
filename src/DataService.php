@@ -54,10 +54,6 @@ readonly class DataService
 
     private static function profiles(): iterable
     {
-        static $default = [
-            'systemDefault' => false,
-            'fileType' => 'text/yaml',
-        ];
         $mapping = static function (iterable $mapping) {
             $i = 0;
             foreach ($mapping as $mappedKey => $key) {
@@ -70,6 +66,8 @@ readonly class DataService
             }
         };
         yield 'sc_importexport_profile' => [
+            'systemDefault' => true,
+            'fileType' => 'application/x-yaml',
             'sourceEntity' => ImportExportProfileDefinition::ENTITY_NAME,
             'technicalName' => 'sc_' . ImportExportProfileDefinition::ENTITY_NAME,
             'label' => 'SageConnect-Profil Import/Export Profil',
@@ -88,6 +86,6 @@ readonly class DataService
                 ['mappedKey' => 'technicalName', 'entityName' => ImportExportProfileDefinition::ENTITY_NAME],
             ],
             'config' => ['createEntities' => true, 'updateEntities' => true],
-        ] + $default;
+        ];
     }
 }
