@@ -1,0 +1,131 @@
+<?php declare(strict_types=1);
+
+namespace Naehwelt\Shopware;
+
+use Shopware\Core\Checkout\Cart\Price\GrossPriceCalculator;
+use Shopware\Core\Checkout\Cart\Price\NetPriceCalculator;
+use Shopware\Core\Checkout\Cart\Price\Struct\QuantityPriceDefinition;
+use Shopware\Core\Checkout\Cart\Tax\Struct\TaxRule;
+use Shopware\Core\Checkout\Cart\Tax\Struct\TaxRuleCollection;
+use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent;
+use Shopware\Core\Content\Product\ProductDefinition;
+use Shopware\Core\Framework\Context;
+use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
+use Shopware\Core\Framework\DataAbstractionLayer\Entity;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\FkField;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\ManyToOneAssociationField;
+use Shopware\Core\Framework\DataAbstractionLayer\Field\PriceField;
+use Shopware\Core\Framework\DataAbstractionLayer\Pricing\Price;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
+use Symfony\Contracts\Service\ResetInterface;
+
+class PriceService implements ResetInterface
+{
+    private array $cache = [];
+
+    public const MAPPING = [
+        ProductDefinition::class => ['tax' => ['price']]
+    ];
+
+    public function __construct(
+        readonly private DefinitionInstanceRegistry $registry,
+        private readonly NetPriceCalculator $netCalculator,
+        private readonly GrossPriceCalculator $grossCalculator,
+
+        readonly private array $mapping = self::MAPPING
+    ){}
+
+    /**
+     * @template TElement of Entity
+     * @param class-string<TElement> $class
+     * @return ?TElement
+     */
+    private function byId(string $class, ?string $id, Context $context)
+    {
+        if (!$id || ($this->cache[$class][$id] ?? false) === null) {
+            return null;
+        }
+        $name = $this->registry->getByEntityClass(new $class())?->getEntityName();
+        return $this->cache[$class][$id] ??= $this->registry->getRepository($name)->search(
+            new Criteria([$id]),
+            $context
+        )->first();
+    }
+
+
+    /**
+     * @return iterable<FkField|ManyToOneAssociationField, PriceField>
+     */
+    private function fields(string $sourceEntity): iterable
+    {
+        $def = $this->registry->getByClassOrEntityName($sourceEntity);
+        foreach ($this->mapping[$def->getClass()] ?? [] as $taxFieldName => $priceFieldsNames) {
+            $taxField = $def->getField($taxFieldName);
+            foreach ($priceFieldsNames as $priceFieldName) {
+                yield $taxField => $def->getField($priceFieldName);
+            }
+        }
+    }
+
+    private function tax(FkField|ManyToOneAssociationField $field, array $record, Context $context): TaxRuleCollection
+    {
+        $id = $record[$field->getPropertyName()][$field->getReferenceField()] ?? null;
+        $entityName = $field->getReferenceDefinition()->getEntityName();
+        return $this->cache[$entityName][$id] ??= new TaxRuleCollection([new TaxRule(
+            $this->registry->getRepository($entityName)->search(new Criteria([$id]), $context)->first()->getTaxRate())
+        ]);
+    }
+
+    /**
+     * @return iterable<TaxRuleCollection, PriceField>
+     */
+    private function taxRulesWithPrices(string $sourceEntity, array $record, Context $context): iterable
+    {
+        foreach ($this->fields($sourceEntity) as $fkField => $priceField) {
+            yield $this->tax($fkField, $record, $context) => $priceField;
+        }
+    }
+
+    /**
+     * @return callable(): Price
+     */
+    public function calculator(Context $context): callable
+    {
+        $rounding = $context->getRounding();
+        return function (TaxRuleCollection $taxRules, Price $price) use ($rounding) {
+            if (!$price->getNet()) {
+                $qpd = new QuantityPriceDefinition($price->getGross(), $taxRules);
+                $calc = $this->grossCalculator->calculate($qpd, $rounding);
+                $taxes = $calc->getCalculatedTaxes()->getAmount();
+                $price->setNet($price->getGross() - $taxes);
+            } elseif (!$price->getGross()) {
+                $qpd = new QuantityPriceDefinition($price->getNet(), $taxRules);
+                $calc = $this->netCalculator->calculate($qpd, $rounding);
+                $taxes = $calc->getCalculatedTaxes()->getAmount();
+                $price->setGross($price->getNet() + $taxes);
+            }
+            return $price;
+        };
+
+    }
+
+    public function calculateLinkedPrice(ImportExportBeforeImportRecordEvent $event): void
+    {
+        $record = $event->getRecord();
+        $sourceEntity = $event->getConfig()->get('sourceEntity');
+        $calc = $this->calculator($event->getContext());
+        foreach ($this->taxRulesWithPrices($sourceEntity, $record, $event->getContext()) as $taxRules => $priceField) {
+            $prices = $priceField->getSerializer()->decode($priceField, $record[$priceField->getPropertyName()] ?? null);
+            foreach ($prices ?? [] as $id => $price) {
+                $price = $calc($taxRules, $price);
+                $record[$priceField->getPropertyName()][$id] = $price->getVars();
+            }
+        }
+        $event->setRecord($record);
+    }
+
+    public function reset(): void
+    {
+        $this->cache = [];
+    }
+}
