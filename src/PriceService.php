@@ -11,7 +11,6 @@ use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
-use Shopware\Core\Framework\DataAbstractionLayer\Entity;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\FkField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ManyToOneAssociationField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\PriceField;
@@ -29,29 +28,10 @@ class PriceService implements ResetInterface
 
     public function __construct(
         readonly private DefinitionInstanceRegistry $registry,
-        private readonly NetPriceCalculator $netCalculator,
-        private readonly GrossPriceCalculator $grossCalculator,
-
-        readonly private array $mapping = self::MAPPING
+        readonly private NetPriceCalculator $netCalculator,
+        readonly private GrossPriceCalculator $grossCalculator,
+        readonly private array $mapping = self::MAPPING,
     ){}
-
-    /**
-     * @template TElement of Entity
-     * @param class-string<TElement> $class
-     * @return ?TElement
-     */
-    private function byId(string $class, ?string $id, Context $context)
-    {
-        if (!$id || ($this->cache[$class][$id] ?? false) === null) {
-            return null;
-        }
-        $name = $this->registry->getByEntityClass(new $class())?->getEntityName();
-        return $this->cache[$class][$id] ??= $this->registry->getRepository($name)->search(
-            new Criteria([$id]),
-            $context
-        )->first();
-    }
-
 
     /**
      * @return iterable<FkField|ManyToOneAssociationField, PriceField>
@@ -71,9 +51,10 @@ class PriceService implements ResetInterface
     {
         $id = $record[$field->getPropertyName()][$field->getReferenceField()] ?? null;
         $entityName = $field->getReferenceDefinition()->getEntityName();
+        /** @noinspection NullPointerExceptionInspection */
         return $this->cache[$entityName][$id] ??= new TaxRuleCollection([new TaxRule(
-            $this->registry->getRepository($entityName)->search(new Criteria([$id]), $context)->first()->getTaxRate())
-        ]);
+            $this->registry->getRepository($entityName)->search(new Criteria([$id]), $context)->first()->getTaxRate()
+        )]);
     }
 
     /**
@@ -106,7 +87,6 @@ class PriceService implements ResetInterface
             }
             return $price;
         };
-
     }
 
     public function calculateLinkedPrice(ImportExportBeforeImportRecordEvent $event): void
@@ -114,11 +94,12 @@ class PriceService implements ResetInterface
         $record = $event->getRecord();
         $sourceEntity = $event->getConfig()->get('sourceEntity');
         $calc = $this->calculator($event->getContext());
-        foreach ($this->taxRulesWithPrices($sourceEntity, $record, $event->getContext()) as $taxRules => $priceField) {
-            $prices = $priceField->getSerializer()->decode($priceField, $record[$priceField->getPropertyName()] ?? null);
+        foreach ($this->taxRulesWithPrices($sourceEntity, $record, $event->getContext()) as $taxRules => $field) {
+            $property = $field->getPropertyName();
+            $prices = $field->getSerializer()->decode($field, $record[$property] ?? null);
             foreach ($prices ?? [] as $id => $price) {
                 $price = $calc($taxRules, $price);
-                $record[$priceField->getPropertyName()][$id] = $price->getVars();
+                $record[$property][$id] = $price->getVars();
             }
         }
         $event->setRecord($record);
