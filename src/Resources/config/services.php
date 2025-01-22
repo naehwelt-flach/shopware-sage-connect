@@ -3,12 +3,17 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 use Naehwelt\Shopware\DataService;
 use Naehwelt\Shopware\PriceService;
 use Naehwelt\Shopware\ImportExport;
+use Naehwelt\Shopware\DataAbstractionLayer;
+use Naehwelt\Shopware\MessageQueue;
 use Shopware\Core\Checkout\Cart\Price\GrossPriceCalculator;
 use Shopware\Core\Checkout\Cart\Price\NetPriceCalculator;
 use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent;
 use Shopware\Core\Content\ImportExport\Service\FileService;
 use Shopware\Core\Framework\Api\Controller\SyncController;
+use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
+use Shopware\Core\Framework\DataAbstractionLayer\Search\RequestCriteriaBuilder;
+use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 return static function(ContainerConfigurator $container): void {
     $services = $container->services()->defaults()->autowire()->autoconfigure();
@@ -20,12 +25,39 @@ return static function(ContainerConfigurator $container): void {
         if ($class === null) {
             return $services->set($id)->args($args);
         }
-
         $services->set($id, $class)->args($args);
         return $id;
     };
 
+    foreach ([
+        MessageQueue\EveryMinuteHandler::class,
+        MessageQueue\EveryFiveMinutesHandler::class,
+        MessageQueue\EveryHourHandler::class,
+    ] as $handler) {
+        foreach ((new \ReflectionClass($handler))->getAttributes(AsMessageHandler::class) as $ref) {
+            /** @var AsMessageHandler $attr */
+            if (($attr = $ref->newInstance())->handles) {
+                $services
+                    ->set($handler)
+                        ->args([
+                            service('scheduled_task.repository'),
+                            service('logger'),
+                            tagged_iterator($handler),
+                        ])
+                    ->set($attr->handles)->tag('shopware.scheduled.task');
+                break;
+            }
+        }
+    }
+
     $services
+        ->set(DataAbstractionLayer\Provider::class)
+            ->args([
+                service(DefinitionInstanceRegistry::class),
+                service(RequestCriteriaBuilder::class),
+                inline_service(Context::class)->factory([Context::class, 'createDefaultContext'])
+            ])
+
         ->set(DataService::class)->public()
             ->args([
                 service(SyncController::class),
@@ -34,7 +66,7 @@ return static function(ContainerConfigurator $container): void {
 
         ->set(PriceService::class)
             ->args([
-                service(DefinitionInstanceRegistry::class),
+                service(DataAbstractionLayer\Provider::class),
                 service(NetPriceCalculator::class),
                 service(GrossPriceCalculator::class),
             ])
@@ -42,16 +74,6 @@ return static function(ContainerConfigurator $container): void {
                 'event' => ImportExportBeforeImportRecordEvent::class,
                 'method' => [PriceService::class, 'calculateLinkedPrice'][1]
             ])
-
-        ->set(ImportExport\Task::class)
-            ->tag('shopware.scheduled.task')
-
-        ->set(ImportExport\TaskHandler::class)
-            ->args([
-                service('scheduled_task.repository'),
-                service('monolog.logger'),
-            ])
-            ->tag('messenger.message_handler')
 
         ->set(FileService::class)
             ->class(ImportExport\FileService::class)

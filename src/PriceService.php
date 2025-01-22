@@ -2,6 +2,7 @@
 
 namespace Naehwelt\Shopware;
 
+use Naehwelt\Shopware\DataAbstractionLayer\Provider;
 use Shopware\Core\Checkout\Cart\Price\GrossPriceCalculator;
 use Shopware\Core\Checkout\Cart\Price\NetPriceCalculator;
 use Shopware\Core\Checkout\Cart\Price\Struct\QuantityPriceDefinition;
@@ -10,12 +11,10 @@ use Shopware\Core\Checkout\Cart\Tax\Struct\TaxRuleCollection;
 use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Framework\Context;
-use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\FkField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\ManyToOneAssociationField;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\PriceField;
 use Shopware\Core\Framework\DataAbstractionLayer\Pricing\Price;
-use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Symfony\Contracts\Service\ResetInterface;
 
 class PriceService implements ResetInterface
@@ -27,7 +26,7 @@ class PriceService implements ResetInterface
     ];
 
     public function __construct(
-        readonly private DefinitionInstanceRegistry $registry,
+        readonly private Provider $provider,
         readonly private NetPriceCalculator $netCalculator,
         readonly private GrossPriceCalculator $grossCalculator,
         readonly private array $mapping = self::MAPPING,
@@ -38,7 +37,7 @@ class PriceService implements ResetInterface
      */
     private function fields(string $sourceEntity): iterable
     {
-        $def = $this->registry->getByClassOrEntityName($sourceEntity);
+        $def = $this->provider->definition($sourceEntity);
         foreach ($this->mapping[$def->getClass()] ?? [] as $taxFieldName => $priceFieldsNames) {
             $taxField = $def->getField($taxFieldName);
             foreach ($priceFieldsNames as $priceFieldName) {
@@ -52,8 +51,9 @@ class PriceService implements ResetInterface
         $id = $record[$field->getPropertyName()][$field->getReferenceField()] ?? null;
         $entityName = $field->getReferenceDefinition()->getEntityName();
         /** @noinspection NullPointerExceptionInspection */
+        /** @noinspection PhpPossiblePolymorphicInvocationInspection */
         return $this->cache[$entityName][$id] ??= new TaxRuleCollection([new TaxRule(
-            $this->registry->getRepository($entityName)->search(new Criteria([$id]), $context)->first()->getTaxRate()
+            $this->provider->entity($this->provider->cl($entityName), $id, $context)->getTaxRate()
         )]);
     }
 
