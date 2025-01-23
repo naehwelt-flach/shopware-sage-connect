@@ -2,49 +2,58 @@
 
 namespace Naehwelt\Shopware\ImportExport;
 
-use League\Flysystem\FilesystemOperator;
 use Naehwelt\Shopware\DataAbstractionLayer\Provider;
+use Naehwelt\Shopware\Filesystem\MountManager;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Shopware\Core\Content\ImportExport\Controller\ImportExportActionController;
+use Shopware\Core\Content\ImportExport\ImportExportFactory;
 use Shopware\Core\Content\ImportExport\ImportExportProfileEntity;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Mime\MimeTypes;
 
 readonly class DirectoryHandler
 {
     public function __construct(
+        private MountManager $mountManager,
         private Provider $provider,
+        private ImportExportFactory $factory,
         private ImportExportActionController $controller,
-        private FilesystemOperator $sourceFs,
-        private string|array|Criteria $profileCriteria,
         private string $location = '',
+        private string|array|Criteria $profileCriteria,
+        private bool $deleteAfterUpload = false,
         private ?string $expireDate = null,
         private array $config = [],
         private ?LoggerInterface $logger = null,
         private string $logLevel = LogLevel::DEBUG,
-    ) {}
+    ) {
+    }
+
+    public function with(
+        null|string $location = null,
+        null|string|array|Criteria $profileCriteria = null,
+        null|bool $deleteAfterUpload = null,
+        null|string $expireDate = null,
+        null|array $config = null,
+    ): static {
+        $args = array_filter([
+            'location' => $location,
+            'profileCriteria' => $profileCriteria,
+            'deleteAfterUpload' => $deleteAfterUpload,
+            'expireDate' => $expireDate,
+            'config' => $config,
+        ], fn($v) => $v !== null);
+        return new static(...$args + get_object_vars($this));
+    }
 
     public function __invoke(): void
     {
         $profile = $this->provider->entity(ImportExportProfileEntity::class, $this->profileCriteria);
         assert($profile instanceof ImportExportProfileEntity);
-        $mimes = MimeTypes::getDefault();
         $type = $profile->getFileType();
-        foreach ($this->sourceFs->listContents($this->location) as $file) {
-            if ($file->isDir()) {
-                continue;
-            }
-            if (!in_array($type, $mimes->getMimeTypes(pathinfo($path = $file->path(), PATHINFO_EXTENSION)), true)) {
-                continue;
-            }
-            $uploaded = new UploadedFile(
-                stream_get_meta_data($this->sourceFs->readStream($path))['uri'],
-                $path,
-                $type
-            );
+        foreach ($this->mountManager->files($type, $this->location, copy: !$this->deleteAfterUpload) as $uploaded => $_) {
+            $uploaded = new UploadedFile(...array_values($uploaded));
             $req = new Request(request: [
                 'profileId' => $profile->getId(),
                 'config' => $this->config,

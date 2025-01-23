@@ -1,14 +1,19 @@
 <?php
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 use Naehwelt\Shopware\DataService;
+use Naehwelt\Shopware\Filesystem;
 use Naehwelt\Shopware\PriceService;
 use Naehwelt\Shopware\ImportExport;
 use Naehwelt\Shopware\DataAbstractionLayer;
 use Naehwelt\Shopware\MessageQueue;
+use Naehwelt\Shopware\SageConnect;
 use Shopware\Core\Checkout\Cart\Price\GrossPriceCalculator;
 use Shopware\Core\Checkout\Cart\Price\NetPriceCalculator;
+use Shopware\Core\Content\ImportExport\Controller\ImportExportActionController;
 use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent;
+use Shopware\Core\Content\ImportExport\ImportExportFactory;
 use Shopware\Core\Content\ImportExport\Service\FileService;
+use Shopware\Core\Framework\Adapter\Filesystem\PrefixFilesystem;
 use Shopware\Core\Framework\Api\Controller\SyncController;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
@@ -104,5 +109,28 @@ return static function(ContainerConfigurator $container): void {
             ])
             ->tag('shopware.import_export.reader_factory')
 
+        ->set(SageConnect::PREFIX . '.filesystem.temp', PrefixFilesystem::class)
+            ->args([
+                service('shopware.filesystem.temp'),
+                'plugins/' . SageConnect::PREFIX
+            ])
+
+        ->set(Filesystem\MountManager::class)->public()
+            ->args([
+                service(SageConnect::PREFIX . '.filesystem.private'),
+                service(SageConnect::PREFIX . '.filesystem.temp'),
+                service('mime_types'),
+            ])
+
+        ->set(ImportExport\DirectoryHandler::class)
+            ->args([
+                service(Filesystem\MountManager::class),
+                service(DataAbstractionLayer\Provider::class),
+                service(DataAbstractionLayer\Provider::class),
+                service(ImportExportFactory::class),
+                service(ImportExportActionController::class),
+                [],
+                []
+            ])
     ;
 };

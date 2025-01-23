@@ -9,6 +9,8 @@ use Shopware\Core\Framework\Plugin\Context\UpdateContext;
 
 class SageConnect extends Plugin
 {
+    public const PREFIX = 'sage_connect';
+
     public function activate(ActivateContext $activateContext): void
     {
         $this->generate($activateContext);

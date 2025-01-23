@@ -5,21 +5,17 @@ return static function(ContainerConfigurator $container): void {
     $services = $container->services()->defaults()->autowire()->autoconfigure();
     ...
     foreach ([
-        'foo/' => 'sc_product',
-        'bar/' => 'sc_product',
+        'product_prices/' => 'sage_connect_product_prices',
+        'product/' => 'sage_connect_product',
     ] as $prefix => $technicalName) {
-        $services->set(ImportExport\DirectoryHandler::class. $prefix, ImportExport\DirectoryHandler::class)
+        $services->set(ImportExport\DirectoryHandler::class . ".$prefix", ImportExport\DirectoryHandler::class)
+            ->factory([service(ImportExport\DirectoryHandler::class), 'with'])
             ->args([
-                service(DataAbstractionLayer\Provider::class),
-                service(ImportExportActionController::class),
-                inline_service(PrefixFilesystem::class)
-                    ->args([service('shopware.filesystem.temp'), $prefix]),
-                ['technicalName' => $technicalName],
-                '$logger' => service('logger'),
+                '$location' => $prefix,
+                '$profileCriteria' => ['technicalName' => $technicalName],
             ])
             ->tag(MessageQueue\EveryFiveMinutesHandler::class);
     }
     ...
 }
-
 ```
