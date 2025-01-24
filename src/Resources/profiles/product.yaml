@@ -1,0 +1,48 @@
+#file: noinspection YAMLIncompatibleTypes
+- name: sage_connect_product
+  label: 'SageConnect-Profil Product'
+  source_entity: product
+  file_type: text/csv
+  delimiter: ;
+  enclosure: '"'
+  config:
+    createEntities: true
+    updateEntities: true
+  update_by:
+    - entityName: product
+      mappedKey: productNumber
+    - entityName: tax
+      mappedKey: name
+    - entityName: product_manufacturer
+      mappedKey: translations.DEFAULT.name
+  mapping:
+    - key: productNumber
+      mappedKey: product_number
+    - key: translations.DEFAULT.name
+      mappedKey: name
+    - key: stock
+      mappedKey: stock
+    - key: price.DEFAULT.gross
+      mappedKey: price_gross
+    - key: manufacturer.translations.DEFAULT.name
+      mappedKey: manufacturer_name
+    - key: price.DEFAULT.linked
+      mappedKey: price_linked
+      useDefaultValue: true
+      defaultValue: 1
+    - key: price.DEFAULT.net
+      mappedKey: price_net
+      useDefaultValue: true
+      defaultValue: 0
+    - key: tax.name
+      mappedKey: tax_name
+      useDefaultValue: true
+      defaultValue: Standard rate
+    - key: translations.DEFAULT.description
+      mappedKey: description
+      useDefaultValue: true
+      defaultValue:
+    - key: active
+      mappedKey: active
+      useDefaultValue: true
+      defaultValue: true
