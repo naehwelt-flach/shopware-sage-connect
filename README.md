@@ -2,7 +2,7 @@
 
 ### install as git submodule
 
-```json
+```
 # composer.json
         
 {
@@ -21,17 +21,19 @@
 }
 ```
 
-```.gitgnore
+```
 # custom/plugins/.gitignore
 
 /*
 !/NaehweltSageConnect/
+...
 ```
 
 ```bash
+# bash
 
 git submodule add -b main \
-  git@github.com:naehwelt-flach/shopware-sage-connect.git \
+  https://github.com/naehwelt-flach/shopware-sage-connect.git \
   custom/plugins/NaehweltSageConnect/
 
 ...
