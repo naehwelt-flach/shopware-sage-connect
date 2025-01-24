@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Naehwelt\Shopware;
 
+use Naehwelt\Shopware\ImportExport\DirectoryHandler;
 use Shopware\Core\Content\ImportExport\ImportExportProfileDefinition;
 use Shopware\Core\Framework\Api\Controller\SyncController;
 use Shopware\Core\Framework\Api\Sync\SyncOperation;
@@ -11,22 +12,35 @@ use Shopware\Core\Framework\Uuid\Uuid;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 
-readonly class DataService
+readonly class InstallService
 {
+    private string $profileProfile;
+
     public function __construct(
         private SyncController $sync,
         private RequestStack $requestStack,
-    ){}
+        private DirectoryHandler $directoryHandler,
+    ) {
+        $this->profileProfile = SageConnect::id('_' . ImportExportProfileDefinition::ENTITY_NAME . '_yaml');
+    }
 
-    public function generate(Context $context): void
+    public function createImportExportProfileEntity(Context $context): void
     {
-        $req = self::req(ImportExportProfileDefinition::ENTITY_NAME, self::profiles());
+        $req = self::req(ImportExportProfileDefinition::ENTITY_NAME, $this->profiles());
         $this->requestStack->push($req);
         $res = $this->sync->sync($req, $context);
         $this->requestStack->pop();
         $result = json_decode((string) $res->getContent(), true);
         if ($res->getStatusCode() >= 400) {
             throw new \RuntimeException(\sprintf('Error importing: %s', \print_r($result, true)));
+        }
+    }
+
+    public function importResources(Context $context): void
+    {
+        $handler = $this->directoryHandler->with(['technicalName' => $this->profileProfile]);
+        foreach ($handler->mountManager->files('.yaml', 'profiles') as $args => $file) {
+            $todo = true;
         }
     }
 
@@ -42,7 +56,6 @@ readonly class DataService
                 Uuid::isValid($id) || $id = Uuid::fromStringToHex($id);
                 $entity['id'] = $id;
             }
-
             $payload[] = $entity;
         }
         return new Request([], [], [], [], [], [], \json_encode([[
@@ -52,7 +65,7 @@ readonly class DataService
         ]], JSON_THROW_ON_ERROR));
     }
 
-    private static function profiles(): iterable
+    private function profiles(): iterable
     {
         $mapping = static function (iterable $mapping) {
             $i = 0;
@@ -65,12 +78,13 @@ readonly class DataService
                 ];
             }
         };
-        yield 'sc_importexport_profile' => [
-            'systemDefault' => true,
+        yield $this->profileProfile => [
+            'name' => $this->profileProfile,
+            'technicalName' => $this->profileProfile,
+            'systemDefault' => false,
             'fileType' => 'application/x-yaml',
             'sourceEntity' => ImportExportProfileDefinition::ENTITY_NAME,
-            'technicalName' => 'sc_' . ImportExportProfileDefinition::ENTITY_NAME,
-            'label' => 'SageConnect-Profil Import/Export Profil',
+            'label' => 'SageConnect-Profil Import/Export Profil (YAML)',
             'mapping' => [...$mapping([
                 'name' => ['key' => 'technicalName', 'requiredByUser' => true],
                 'label' => 'translations.DEFAULT.label',
@@ -86,6 +100,8 @@ readonly class DataService
                 ['mappedKey' => 'technicalName', 'entityName' => ImportExportProfileDefinition::ENTITY_NAME],
             ],
             'config' => ['createEntities' => true, 'updateEntities' => true],
+            'delimiter' => ';', // unused by required
+            'enclosure' => '"', // unused by required
         ];
     }
 }

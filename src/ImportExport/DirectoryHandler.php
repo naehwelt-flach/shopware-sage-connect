@@ -16,12 +16,12 @@ use Symfony\Component\HttpFoundation\Request;
 readonly class DirectoryHandler
 {
     public function __construct(
-        private MountManager $mountManager,
+        public MountManager $mountManager,
         private Provider $provider,
         private ImportExportFactory $factory,
         private ImportExportActionController $controller,
-        private string $location = '',
         private string|array|Criteria $profileCriteria,
+        private string $location = '',
         private bool $deleteAfterUpload = false,
         private ?string $expireDate = null,
         private array $config = [],
@@ -31,11 +31,12 @@ readonly class DirectoryHandler
     }
 
     public function with(
-        null|string $location = null,
         null|string|array|Criteria $profileCriteria = null,
+        null|string $location = null,
         null|bool $deleteAfterUpload = null,
         null|string $expireDate = null,
         null|array $config = null,
+        null|MountManager $mountManager = null,
     ): static {
         $args = array_filter([
             'location' => $location,
@@ -43,6 +44,7 @@ readonly class DirectoryHandler
             'deleteAfterUpload' => $deleteAfterUpload,
             'expireDate' => $expireDate,
             'config' => $config,
+            'mountManager' => $mountManager,
         ], fn($v) => $v !== null);
         return new static(...$args + get_object_vars($this));
     }

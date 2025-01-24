@@ -13,11 +13,23 @@ readonly class MountManager
 
     public function __construct(
         Flysystem\FilesystemOperator $sourceFs,
-        Flysystem\FilesystemOperator $tempFs,
+        private Flysystem\FilesystemOperator $tempFs,
         private MimeTypesInterface $mimeTypes,
         private string $location = '',
     ) {
-        $this->mm = new Flysystem\MountManager(['source' => $sourceFs, 'tmp' => $tempFs]);
+        $this->mm = new Flysystem\MountManager(['source' => $sourceFs, 'tmp' => $this->tempFs]);
+    }
+
+    public function with(
+        null|Flysystem\FilesystemOperator $sourceFs = null,
+        null|string $location = null,
+    ): static {
+        return new static(
+            $sourceFs ?? $this->mm,
+            $this->tempFs,
+            $this->mimeTypes,
+            $location ?? $this->location,
+        );
     }
 
     /**

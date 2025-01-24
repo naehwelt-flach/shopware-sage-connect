@@ -9,20 +9,26 @@ use Shopware\Core\Framework\Plugin\Context\UpdateContext;
 
 class SageConnect extends Plugin
 {
-    public const PREFIX = 'sage_connect';
+    public static function id(string $id = ''): string
+    {
+        return 'sage_connect' . $id;
+    }
 
     public function activate(ActivateContext $activateContext): void
     {
-        $this->generate($activateContext);
+        $this->installService($activateContext);
     }
 
     public function update(UpdateContext $updateContext): void
     {
-        $this->generate($updateContext);
+        $this->installService($updateContext);
     }
 
-    private function generate(InstallContext $context): void
+    private function installService(InstallContext $context): void
     {
-        $this->container?->get(DataService::class)?->generate($context->getContext());
+        $service = $this->container->get(InstallService::class);
+        assert($service instanceof InstallService);
+        $service->createImportExportProfileEntity($context->getContext());
+        $service->importResources($context->getContext());
     }
 }

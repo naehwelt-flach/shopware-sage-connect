@@ -1,6 +1,6 @@
 <?php
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
-use Naehwelt\Shopware\DataService;
+use Naehwelt\Shopware\InstallService;
 use Naehwelt\Shopware\Filesystem;
 use Naehwelt\Shopware\PriceService;
 use Naehwelt\Shopware\ImportExport;
@@ -13,6 +13,7 @@ use Shopware\Core\Content\ImportExport\Controller\ImportExportActionController;
 use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent;
 use Shopware\Core\Content\ImportExport\ImportExportFactory;
 use Shopware\Core\Content\ImportExport\Service\FileService;
+use Shopware\Core\Framework\Adapter\Filesystem\FilesystemFactory;
 use Shopware\Core\Framework\Adapter\Filesystem\PrefixFilesystem;
 use Shopware\Core\Framework\Api\Controller\SyncController;
 use Shopware\Core\Framework\Context;
@@ -63,12 +64,6 @@ return static function(ContainerConfigurator $container): void {
                 inline_service(Context::class)->factory([Context::class, 'createDefaultContext'])
             ])
 
-        ->set(DataService::class)->public()
-            ->args([
-                service(SyncController::class),
-                service('request_stack'),
-            ])
-
         ->set(PriceService::class)
             ->args([
                 service(DataAbstractionLayer\Provider::class),
@@ -109,16 +104,16 @@ return static function(ContainerConfigurator $container): void {
             ])
             ->tag('shopware.import_export.reader_factory')
 
-        ->set(SageConnect::PREFIX . '.filesystem.temp', PrefixFilesystem::class)
+        ->set(SageConnect::id('.filesystem.temp'), PrefixFilesystem::class)
             ->args([
                 service('shopware.filesystem.temp'),
-                'plugins/' . SageConnect::PREFIX
+                'plugins/' . SageConnect::id()
             ])
 
         ->set(Filesystem\MountManager::class)->public()
             ->args([
-                service(SageConnect::PREFIX . '.filesystem.private'),
-                service(SageConnect::PREFIX . '.filesystem.temp'),
+                service(SageConnect::id('.filesystem.private')),
+                service(SageConnect::id('.filesystem.temp')),
                 service('mime_types'),
             ])
 
@@ -126,11 +121,34 @@ return static function(ContainerConfigurator $container): void {
             ->args([
                 service(Filesystem\MountManager::class),
                 service(DataAbstractionLayer\Provider::class),
-                service(DataAbstractionLayer\Provider::class),
                 service(ImportExportFactory::class),
                 service(ImportExportActionController::class),
                 [],
-                []
+                '',
             ])
+
+        ->set(SageConnect::id('.filesystem.resources'), PrefixFilesystem::class)
+            ->factory([service(FilesystemFactory::class), 'privateFactory'])
+            ->args([[
+                'type' => 'local',
+                'config' => ['root' => dirname(__DIR__)]
+            ]])
+
+        ->set(InstallService::class)->public()
+            ->args([
+                service(SyncController::class),
+                service('request_stack'),
+                inline_service(ImportExport\DirectoryHandler::class)
+                    ->factory([service(ImportExport\DirectoryHandler::class), 'with'])
+                    ->args([
+                        '$mountManager' => inline_service(Filesystem\MountManager::class)
+                            ->factory([service(Filesystem\MountManager::class), 'with'])
+                            ->args([
+                                service(SageConnect::id('.filesystem.resources')),
+                            ]),
+                        '$location' => ''
+                    ])
+            ])
+
     ;
 };
