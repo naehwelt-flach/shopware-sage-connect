@@ -11,7 +11,6 @@ use Shopware\Core\Checkout\Cart\Price\GrossPriceCalculator;
 use Shopware\Core\Checkout\Cart\Price\NetPriceCalculator;
 use Shopware\Core\Content\ImportExport\Controller\ImportExportActionController;
 use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent;
-use Shopware\Core\Content\ImportExport\ImportExportFactory;
 use Shopware\Core\Content\ImportExport\Service\FileService;
 use Shopware\Core\Framework\Adapter\Filesystem\FilesystemFactory;
 use Shopware\Core\Framework\Adapter\Filesystem\PrefixFilesystem;
@@ -121,7 +120,6 @@ return static function(ContainerConfigurator $container): void {
             ->args([
                 service(Filesystem\MountManager::class),
                 service(DataAbstractionLayer\Provider::class),
-                service(ImportExportFactory::class),
                 service(ImportExportActionController::class),
                 [],
                 '',

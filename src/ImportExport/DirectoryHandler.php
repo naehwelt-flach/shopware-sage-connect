@@ -6,11 +6,13 @@ use Naehwelt\Shopware\DataAbstractionLayer\Provider;
 use Naehwelt\Shopware\Filesystem\MountManager;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
+use Shopware\Core\Content\ImportExport\Aggregate\ImportExportLog\ImportExportLogEntity;
 use Shopware\Core\Content\ImportExport\Controller\ImportExportActionController;
-use Shopware\Core\Content\ImportExport\ImportExportFactory;
 use Shopware\Core\Content\ImportExport\ImportExportProfileEntity;
+use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\Criteria;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
 readonly class DirectoryHandler
@@ -18,7 +20,6 @@ readonly class DirectoryHandler
     public function __construct(
         public MountManager $mountManager,
         private Provider $provider,
-        private ImportExportFactory $factory,
         private ImportExportActionController $controller,
         private string|array|Criteria $profileCriteria,
         private string $location = '',
@@ -49,32 +50,43 @@ readonly class DirectoryHandler
         return new static(...$args + get_object_vars($this));
     }
 
-    public function __invoke(): void
+    public function __invoke(Context $context = null): void
+    {
+        $context ??= $this->provider->defaultContext;
+        foreach ($this->logEntities() as $logId => $logEntity) {
+            $this->controller->process(new Request(request: ['logId' => $logId]), $context);
+            $this->logger?->log($this->logLevel, __METHOD__ . " ---> {logEntity}", [
+                'logEntity' => $logEntity,
+            ]);
+        }
+    }
+
+    /**
+     * @return iterable<string, ImportExportLogEntity>
+     */
+    protected function logEntities(): iterable
+    {
+        foreach ($this->logResponses() as $req => $logResponse) {
+            $log = json_decode((string)$logResponse->getContent(), true)['log'] ?? [];
+            yield $log['id'] => $this->provider->entity(ImportExportLogEntity::class, $log['id']);
+        }
+    }
+
+    /**
+     * @return iterable<Request, JsonResponse>
+     */
+    protected function logResponses(): iterable
     {
         $profile = $this->provider->entity(ImportExportProfileEntity::class, $this->profileCriteria);
         assert($profile instanceof ImportExportProfileEntity);
         $type = $profile->getFileType();
-        foreach ($this->mountManager->files($type, $this->location, copy: !$this->deleteAfterUpload) as $uploaded => $_) {
-            $uploaded = new UploadedFile(...array_values($uploaded));
+        foreach ($this->mountManager->files($type, $this->location, copy: !$this->deleteAfterUpload) as $args => $_) {
             $req = new Request(request: [
                 'profileId' => $profile->getId(),
                 'config' => $this->config,
                 'expireDate' => $this->expireDate,
-            ], files: ['file' => $uploaded]);
-            $res = $this->controller->initiate($req, $this->provider->defaultContext);
-
-            /**
-             * todo:
-             *
-             * extract {@see ImportExportLogEntity::id} from JsonResponse
-             * dispatch ImportExportMessage like in {@see ImportExportActionController::process}
-             */
-
-            $this->logger?->log($this->logLevel, __METHOD__ . " '{profile}' ---> {req} ---> {res}", [
-                'profile' => $profile->getTechnicalName(),
-                'req' => $req,
-                'res' => $res,
-            ]);
+            ], files: ['file' => new UploadedFile(...array_values($args))]);
+            yield $req => $this->controller->initiate($req, $this->provider->defaultContext);
         }
     }
 }
