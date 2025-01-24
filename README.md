@@ -1,6 +1,50 @@
-### config/services.php
+## SageConnect
+
+### install as git submodule
+
+```json
+# composer.json
+        
+{
+...
+  "repositories": [
+    {
+      "type": "path",
+      "url": "custom/plugins/*",
+      "options": {
+        "symlink": true
+      }
+    },
+    ...
+  ],
+...
+}
+```
+
+```.gitgnore
+# custom/plugins/.gitignore
+
+/*
+!/NaehweltSageConnect/
+```
+
+```bash
+
+git submodule add -b main \
+  git@github.com:naehwelt-flach/shopware-sage-connect.git \
+  custom/plugins/NaehweltSageConnect/
+
+...
+
+bin/console plugin:install SageConnect --activate
+```
+
+
+### configuration example
 
 ```php
+# config/services.php
+
 return static function(ContainerConfigurator $container): void {
     $services = $container->services()->defaults()->autowire()->autoconfigure();
     ...

@@ -62,6 +62,14 @@ readonly class DirectoryHandler
                 'expireDate' => $this->expireDate,
             ], files: ['file' => $uploaded]);
             $res = $this->controller->initiate($req, $this->provider->defaultContext);
+
+            /**
+             * todo:
+             *
+             * extract {@see ImportExportLogEntity::id} from JsonResponse
+             * dispatch ImportExportMessage like in {@see ImportExportActionController::process}
+             */
+
             $this->logger?->log($this->logLevel, __METHOD__ . " '{profile}' ---> {req} ---> {res}", [
                 'profile' => $profile->getTechnicalName(),
                 'req' => $req,
