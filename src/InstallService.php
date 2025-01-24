@@ -38,10 +38,8 @@ readonly class InstallService
 
     public function importResources(Context $context): void
     {
-        $handler = $this->directoryHandler->with(['technicalName' => $this->profileProfile]);
-        foreach ($handler->mountManager->files('.yaml', 'profiles') as $args => $file) {
-            $todo = true;
-        }
+        $handler = $this->directoryHandler->with(['technicalName' => $this->profileProfile], 'profiles');
+        $handler($context);
     }
 
     private static function req(
@@ -100,8 +98,9 @@ readonly class InstallService
                 ['mappedKey' => 'technicalName', 'entityName' => ImportExportProfileDefinition::ENTITY_NAME],
             ],
             'config' => ['createEntities' => true, 'updateEntities' => true],
-            'delimiter' => ';', // unused by required
-            'enclosure' => '"', // unused by required
+            // unused, but required
+            'delimiter' => ';',
+            'enclosure' => '"',
         ];
     }
 }
