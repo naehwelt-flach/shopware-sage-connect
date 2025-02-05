@@ -33,6 +33,14 @@
       mappedKey: price_gross
     - key: manufacturer.translations.DEFAULT.name
       mappedKey: manufacturer_name
+    - key: ean
+      mappedKey: ean
+    - key: manufacturerNumber
+      mappedKey: manufacturer_number
+    - key: cover.media.url
+      mappedKey: cover_media_url
+    - key: media
+      mappedKey: media
     - key: visibilities.all
       mappedKey: sales_channel
     - key: price.DEFAULT.linked
