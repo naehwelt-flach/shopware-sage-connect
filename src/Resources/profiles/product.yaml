@@ -9,6 +9,8 @@
     createEntities: true
     updateEntities: true
     sage_connect:
+      onBeforeImportRow:
+        DefaultProductVisibilities: []
       onBeforeImportRecord:
         CalculateLinkedPrices: []
 
@@ -31,6 +33,8 @@
       mappedKey: price_gross
     - key: manufacturer.translations.DEFAULT.name
       mappedKey: manufacturer_name
+    - key: visibilities.all
+      mappedKey: sales_channel
     - key: price.DEFAULT.linked
       mappedKey: price_linked
       useDefaultValue: true

@@ -69,6 +69,10 @@ return static function(ContainerConfigurator $container): void {
             ])
             ->tag('kernel.event_subscriber')
 
+        ->set(ImportExport\Service\DefaultProductVisibilities::class)
+            ->args([service(DataAbstractionLayer\Provider::class)])
+            ->tag(Event\ImportExportBeforeImportRowEvent::class)
+
         ->set(ImportExport\Service\CalculateLinkedPrices::class)
             ->args([
                 service(DataAbstractionLayer\Provider::class),
