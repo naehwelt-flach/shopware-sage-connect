@@ -8,6 +8,10 @@
   config:
     createEntities: true
     updateEntities: true
+    sage_connect:
+      onBeforeImportRecord:
+        CalculateLinkedPrices: []
+
   update_by:
     - entityName: product
       mappedKey: productNumber
@@ -15,6 +19,7 @@
       mappedKey: name
     - entityName: product_manufacturer
       mappedKey: translations.DEFAULT.name
+
   mapping:
     - key: productNumber
       mappedKey: product_number

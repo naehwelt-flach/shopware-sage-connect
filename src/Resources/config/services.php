@@ -2,7 +2,6 @@
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 use Naehwelt\Shopware\InstallService;
 use Naehwelt\Shopware\Filesystem;
-use Naehwelt\Shopware\PriceService;
 use Naehwelt\Shopware\ImportExport;
 use Naehwelt\Shopware\DataAbstractionLayer;
 use Naehwelt\Shopware\MessageQueue;
@@ -10,7 +9,7 @@ use Naehwelt\Shopware\SageConnect;
 use Shopware\Core\Checkout\Cart\Price\GrossPriceCalculator;
 use Shopware\Core\Checkout\Cart\Price\NetPriceCalculator;
 use Shopware\Core\Content\ImportExport\Controller\ImportExportActionController;
-use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent;
+use Shopware\Core\Content\ImportExport\Event;
 use Shopware\Core\Content\ImportExport\Service\FileService;
 use Shopware\Core\Framework\Adapter\Filesystem\FilesystemFactory;
 use Shopware\Core\Framework\Adapter\Filesystem\PrefixFilesystem;
@@ -63,16 +62,20 @@ return static function(ContainerConfigurator $container): void {
                 inline_service(Context::class)->factory([Context::class, 'createDefaultContext'])
             ])
 
-        ->set(PriceService::class)
+        ->set(ImportExport\EventSubscriber::class)
+            ->args([
+                tagged_iterator(Event\ImportExportBeforeImportRowEvent::class),
+                tagged_iterator(Event\ImportExportBeforeImportRecordEvent::class),
+            ])
+            ->tag('kernel.event_subscriber')
+
+        ->set(ImportExport\Service\CalculateLinkedPrices::class)
             ->args([
                 service(DataAbstractionLayer\Provider::class),
                 service(NetPriceCalculator::class),
                 service(GrossPriceCalculator::class),
             ])
-            ->tag('kernel.event_listener', [
-                'event' => ImportExportBeforeImportRecordEvent::class,
-                'method' => [PriceService::class, 'calculateLinkedPrice'][1]
-            ])
+            ->tag(Event\ImportExportBeforeImportRecordEvent::class)
 
         ->set(FileService::class)
             ->class(ImportExport\FileService::class)

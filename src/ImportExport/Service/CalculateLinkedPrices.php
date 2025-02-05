@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Naehwelt\Shopware;
+namespace Naehwelt\Shopware\ImportExport\Service;
 
 use Naehwelt\Shopware\DataAbstractionLayer\Provider;
 use Shopware\Core\Checkout\Cart\Price\GrossPriceCalculator;
@@ -17,7 +17,7 @@ use Shopware\Core\Framework\DataAbstractionLayer\Field\PriceField;
 use Shopware\Core\Framework\DataAbstractionLayer\Pricing\Price;
 use Symfony\Contracts\Service\ResetInterface;
 
-class PriceService implements ResetInterface
+class CalculateLinkedPrices implements ResetInterface
 {
     private array $cache = [];
 
@@ -89,7 +89,7 @@ class PriceService implements ResetInterface
         };
     }
 
-    public function calculateLinkedPrice(ImportExportBeforeImportRecordEvent $event): void
+    public function __invoke(ImportExportBeforeImportRecordEvent $event): void
     {
         $record = $event->getRecord();
         $sourceEntity = $event->getConfig()->get('sourceEntity');
