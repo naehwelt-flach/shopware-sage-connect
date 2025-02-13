@@ -123,13 +123,17 @@ return static function(ContainerConfigurator $container): void {
                 service('mime_types'),
             ])
 
-        ->set(ImportExport\DirectoryHandler::class)
+        ->set(ImportExport\ProcessFactory::class)
             ->args([
-                service(Filesystem\MountManager::class),
                 service(DataAbstractionLayer\Provider::class),
                 service(ImportExportActionController::class),
                 [],
-                '',
+            ])
+
+        ->set(ImportExport\DirectoryHandler::class)
+            ->args([
+                service(Filesystem\MountManager::class),
+                service(ImportExport\ProcessFactory::class),
             ])
 
         ->set(SageConnect::id('.filesystem.resources'), PrefixFilesystem::class)

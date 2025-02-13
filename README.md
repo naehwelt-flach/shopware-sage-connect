@@ -70,7 +70,7 @@ return static function(ContainerConfigurator $container): void {
             ->factory([service(ImportExport\DirectoryHandler::class), 'with'])
             ->args([
                 '$location' => $prefix,
-                '$profileCriteria' => ['technicalName' => $technicalName],
+                '$processFactory' => ['profileCriteria' => ['technicalName' => $technicalName]]
             ])
             ->tag(MessageQueue\EveryFiveMinutesHandler::class);
     }

@@ -38,7 +38,10 @@ readonly class InstallService
 
     public function importResources(Context $context): void
     {
-        $handler = $this->directoryHandler->with(['technicalName' => $this->profileProfile], 'profiles');
+        $handler = $this->directoryHandler->with(
+            location: 'profiles',
+            processFactory: ['profileCriteria' => ['technicalName' => $this->profileProfile]]
+        );
         $handler($context);
     }
 
