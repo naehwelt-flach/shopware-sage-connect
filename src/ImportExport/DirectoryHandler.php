@@ -37,11 +37,8 @@ readonly class DirectoryHandler
     {
         $fileType = $this->processFactory->profile()->getFileType();
         $copy = !$this->deleteAfterUpload;
-        foreach ($this->mountManager->files($fileType, $this->location, copy: $copy) as $args => $_) {
-            $logEntity = $this->processFactory->process(
-                $this->processFactory->prepare($args, context: $context),
-                context: $context
-            );
+        foreach ($this->mountManager->files($fileType, $this->location, copy: $copy) as $import => $_) {
+            $logEntity = $this->processFactory->sendMessage($import, context: $context);
             $this->logger?->log($this->logLevel, __METHOD__ . " ---> {logEntity}", [
                 'logEntity' => $logEntity,
             ]);
