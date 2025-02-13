@@ -147,6 +147,13 @@ return static function(ContainerConfigurator $container): void {
                 'config' => ['root' => dirname(__DIR__)]
             ]])
 
+        ->set(ImportExport\Event\OrderPlacedListener::class)
+            ->args([
+                inline_service(ImportExport\ProcessFactory::class)
+                    ->factory([service(ImportExport\ProcessFactory::class), 'with'])
+                    ->args([['technicalName' => 'default_orders']]) // todo
+            ])
+
         ->set(InstallService::class)->public()
             ->args([
                 service(SyncController::class),
