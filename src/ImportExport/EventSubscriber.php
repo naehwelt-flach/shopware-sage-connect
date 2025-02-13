@@ -3,9 +3,11 @@
 namespace Naehwelt\Shopware\ImportExport;
 
 use Naehwelt\Shopware\SageConnect;
+use Shopware\Core\Content\ImportExport\Event\EnrichExportCriteriaEvent;
 use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent;
 use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRowEvent;
 use Shopware\Core\Content\ImportExport\Processing;
+use Shopware\Core\Content\ImportExport\Struct\Config;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 readonly class EventSubscriber implements EventSubscriberInterface
@@ -15,6 +17,7 @@ readonly class EventSubscriber implements EventSubscriberInterface
     public function __construct(
         iterable $beforeImportRowServices,
         iterable $beforeImportRecordServices,
+        iterable $enrichExportCriteriaServices,
         private array $namespaces = [
             __NAMESPACE__ . '\\Service\\' => ''
         ]
@@ -22,12 +25,13 @@ readonly class EventSubscriber implements EventSubscriberInterface
         $this->services = [
             ImportExportBeforeImportRowEvent::class => [...$this->mapNamespaces($beforeImportRowServices)],
             ImportExportBeforeImportRecordEvent::class => [...$this->mapNamespaces($beforeImportRecordServices)],
+            EnrichExportCriteriaEvent::class => [...$this->mapNamespaces($enrichExportCriteriaServices)],
         ];
     }
 
     private function mapNamespaces(iterable $services): iterable
     {
-        foreach ($services as $key => $service) {
+        foreach ($services as $service) {
             $class = $service::class;
             yield $class => $service;
             foreach ($this->namespaces as $ns => $alias) {
@@ -39,11 +43,35 @@ readonly class EventSubscriber implements EventSubscriberInterface
         }
     }
 
+    /**
+     * @return \ReflectionParameter[]
+     */
+    private static function refParams(string|array|callable $target): array
+    {
+        is_string($target) && new \ReflectionMethod($target, '__invoke');
+        if (is_string($target)) {
+            $target = explode('::', $target, 2) + [1 => '__invoke'];
+        }
+        if (\is_array($target) && method_exists(...$target)) {
+            return (new \ReflectionMethod(...$target))->getParameters();
+        }
+        return (new \ReflectionFunction($target(...)))->getParameters();
+    }
+
+    public static function params(string|array|callable $target, array $params): array
+    {
+        $class = self::refParams($target)[0]->getType();
+        return [
+            SageConnect::id() => [self::getSubscribedEvents()[$class->getName()] => $params]
+        ];
+    }
+
     public static function getSubscribedEvents(): array
     {
         return [
             ImportExportBeforeImportRowEvent::class => 'onBeforeImportRow',
             ImportExportBeforeImportRecordEvent::class => 'onBeforeImportRecord',
+            EnrichExportCriteriaEvent::class => 'onEnrichExportCriteria',
         ];
     }
 
@@ -57,14 +85,25 @@ readonly class EventSubscriber implements EventSubscriberInterface
         $this->onEvent($event, __FUNCTION__);
     }
 
-    private function onEvent(ImportExportBeforeImportRowEvent|ImportExportBeforeImportRecordEvent $event, string $key): void
+    public function onEnrichExportCriteria(EnrichExportCriteriaEvent $event): void
     {
-        $configuredServices = (array)($event->getConfig()->get(SageConnect::id())[$key] ?? null);
-        foreach ($configuredServices as $name => $config) {
+        $this->onEvent($event, __FUNCTION__, Config::fromLog($event->getLogEntity()));
+    }
+
+    private function onEvent(
+        ImportExportBeforeImportRowEvent|
+        ImportExportBeforeImportRecordEvent|
+        EnrichExportCriteriaEvent $event,
+        string $key,
+        Config $config = null
+    ): void {
+        $config ??= $event->getConfig();
+        $configuredServices = (array)($config->get(SageConnect::id())[$key] ?? null);
+        foreach ($configuredServices as $name => $params) {
             $cl = $event::class;
             $service = $this->services[$cl][$name] ?? null;
             if ($service) {
-                $service($event, (array)$config);
+                $service($event, (array)$params);
             }
         }
     }

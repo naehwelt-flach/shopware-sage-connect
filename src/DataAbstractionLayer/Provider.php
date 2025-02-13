@@ -73,15 +73,15 @@ readonly class Provider
     }
 
     /** @noinspection PhpInternalEntityUsedInspection */
-    public static function criteria(Criteria|string|array $input): Criteria
+    public static function criteria(Criteria|string|array $input, Criteria $criteria = null): Criteria
     {
         if ($input instanceof Criteria) {
             return $input;
         }
+        $criteria ??= new Criteria();
         if (is_string($input)) {
-            return new Criteria(explode(',', $input));
+            return $criteria->setIds(explode(',', $input));
         }
-        $criteria = new Criteria();
         foreach ($input as $field => $value) {
             if (is_object($value)) {
                 match (true) {

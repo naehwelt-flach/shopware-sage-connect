@@ -66,6 +66,7 @@ return static function(ContainerConfigurator $container): void {
             ->args([
                 tagged_iterator(Event\ImportExportBeforeImportRowEvent::class),
                 tagged_iterator(Event\ImportExportBeforeImportRecordEvent::class),
+                tagged_iterator(Event\EnrichExportCriteriaEvent::class),
             ])
             ->tag('kernel.event_subscriber')
 
@@ -80,6 +81,9 @@ return static function(ContainerConfigurator $container): void {
                 service(GrossPriceCalculator::class),
             ])
             ->tag(Event\ImportExportBeforeImportRecordEvent::class)
+
+        ->set(ImportExport\Service\EnrichCriteria::class)
+            ->tag(Event\EnrichExportCriteriaEvent::class)
 
         ->set(FileService::class)
             ->class(ImportExport\FileService::class)
