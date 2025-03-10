@@ -6,6 +6,7 @@ use Naehwelt\Shopware\ImportExport;
 use Naehwelt\Shopware\DataAbstractionLayer;
 use Naehwelt\Shopware\MessageQueue;
 use Naehwelt\Shopware\SageConnect;
+use Naehwelt\Shopware\Twig;
 use Shopware\Core\Checkout\Cart\Price\GrossPriceCalculator;
 use Shopware\Core\Checkout\Cart\Price\NetPriceCalculator;
 use Shopware\Core\Content\ImportExport\Controller\ImportExportActionController;
@@ -91,6 +92,10 @@ return static function(ContainerConfigurator $container): void {
                 service('shopware.filesystem.private'),
                 service('import_export_file.repository'),
             ])
+
+        ->set(Twig\Extension::class)
+            ->args([service(DataAbstractionLayer\Provider::class)])
+            ->tag('twig.extension')
 
         ->set(ImportExport\YamlFileHandler::class)
             ->args([service(DataAbstractionLayer\Provider::class), service('twig')])
