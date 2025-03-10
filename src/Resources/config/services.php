@@ -93,7 +93,7 @@ return static function(ContainerConfigurator $container): void {
             ])
 
         ->set(ImportExport\YamlFileHandler::class)
-            ->args([service(DefinitionInstanceRegistry::class)])
+            ->args([service(DataAbstractionLayer\Provider::class), service('twig')])
 
         ->set(ImportExport\WriterFactory::class)
             ->args([
