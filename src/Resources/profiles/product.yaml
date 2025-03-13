@@ -1,10 +1,7 @@
 #file: noinspection YAMLIncompatibleTypes
 - name: sage_connect_product
-  label: 'SageConnect-Profil Product'
+  label: SageConnect-Profil Product
   source_entity: product
-  file_type: text/csv
-  delimiter: ;
-  enclosure: '"'
   config:
     createEntities: true
     updateEntities: true

@@ -1,9 +1,12 @@
-<?php /** @noinspection PhpInternalEntityUsedInspection */
+<?php
+/** @noinspection PhpUnhandledExceptionInspection */
+/** @noinspection PhpInternalEntityUsedInspection */
 declare(strict_types=1);
 
 namespace Naehwelt\Shopware;
 
 use Naehwelt\Shopware\ImportExport\DirectoryHandler;
+use RuntimeException;
 use Shopware\Core\Content\ImportExport\ImportExportProfileDefinition;
 use Shopware\Core\Framework\Api\Controller\SyncController;
 use Shopware\Core\Framework\Api\Sync\SyncOperation;
@@ -30,19 +33,10 @@ readonly class InstallService
         $this->requestStack->push($req);
         $res = $this->sync->sync($req, $context);
         $this->requestStack->pop();
-        $result = json_decode((string) $res->getContent(), true);
+        $result = json_decode((string)$res->getContent(), true);
         if ($res->getStatusCode() >= 400) {
-            throw new \RuntimeException(\sprintf('Error importing: %s', \print_r($result, true)));
+            throw new RuntimeException(sprintf('Error importing: %s', print_r($result, true)));
         }
-    }
-
-    public function importResources(Context $context): void
-    {
-        $handler = $this->directoryHandler->with(
-            location: 'profiles',
-            processFactory: ['profileCriteria' => ['technicalName' => $this->profileProfile]]
-        );
-        $handler($context);
     }
 
     private static function req(
@@ -59,7 +53,7 @@ readonly class InstallService
             }
             $payload[] = $entity;
         }
-        return new Request([], [], [], [], [], [], \json_encode([[
+        return new Request([], [], [], [], [], [], json_encode([[
             'action' => $action,
             'entity' => $entityName,
             'payload' => $payload,
@@ -86,24 +80,38 @@ readonly class InstallService
             'fileType' => 'application/x-yaml',
             'sourceEntity' => ImportExportProfileDefinition::ENTITY_NAME,
             'label' => 'SageConnect-Profil Import/Export Profil (YAML)',
-            'mapping' => [...$mapping([
-                'name' => ['key' => 'technicalName', 'requiredByUser' => true],
-                'label' => 'translations.DEFAULT.label',
-                'mapping' => 'mapping',
-                'config' => 'config',
-                'update_by' => 'updateBy',
-                'source_entity' => 'sourceEntity',
-                'file_type' => ['key' => 'fileType', 'useDefaultValue' => true, 'defaultValue' => 'text/csv'],
-                'delimiter' => ['useDefaultValue' => true, 'defaultValue' => ';'],
-                'enclosure' => ['useDefaultValue' => true, 'defaultValue' => '"'],
-            ])],
+            'mapping' => [
+                ...$mapping([
+                    'name' => ['key' => 'technicalName', 'requiredByUser' => true],
+                    'label' => 'translations.DEFAULT.label',
+                    'mapping' => 'mapping',
+                    'config' => 'config',
+                    'update_by' => 'updateBy',
+                    'source_entity' => 'sourceEntity',
+                    'file_type' => ['defaultValue' => 'text/csv', 'useDefaultValue' => true, 'key' => 'fileType'],
+                    'delimiter' => ['defaultValue' => ';', 'useDefaultValue' => true],
+                    'enclosure' => ['defaultValue' => '"', 'useDefaultValue' => true],
+                ])
+            ],
             'updateBy' => [
                 ['mappedKey' => 'technicalName', 'entityName' => ImportExportProfileDefinition::ENTITY_NAME],
             ],
-            'config' => ['createEntities' => true, 'updateEntities' => true],
+            'config' => [
+                'createEntities' => true,
+                'updateEntities' => true,
+            ],
             // unused, but required
             'delimiter' => ';',
             'enclosure' => '"',
         ];
+    }
+
+    public function importResources(Context $context): void
+    {
+        $handler = $this->directoryHandler->with(
+            location: 'profiles',
+            processFactory: ['profileCriteria' => ['technicalName' => $this->profileProfile]]
+        );
+        $handler($context);
     }
 }
