@@ -86,6 +86,7 @@ readonly class InstallService
                     'label' => 'translations.DEFAULT.label',
                     'mapping' => 'mapping',
                     'config' => 'config',
+                    'type' => 'type',
                     'update_by' => 'updateBy',
                     'source_entity' => 'sourceEntity',
                     'file_type' => ['defaultValue' => 'text/csv', 'useDefaultValue' => true, 'key' => 'fileType'],
