@@ -63,6 +63,9 @@ return static function(ContainerConfigurator $container): void {
                 inline_service(Context::class)->factory([Context::class, 'createDefaultContext'])
             ])
 
+        ->set(ImportExport\Serializer\EntitySerializer::class)
+            ->tag('shopware.import_export.entity_serializer', ['priority' => -900])
+
         ->set(ImportExport\EventSubscriber::class)
             ->args([
                 tagged_iterator(Event\ImportExportBeforeImportRowEvent::class),

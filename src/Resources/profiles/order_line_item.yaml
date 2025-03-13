@@ -1,0 +1,29 @@
+- name: sage_connect_order_line_item
+  label: SageConnect-Profil OrderLineItem
+  source_entity: order_line_item
+  type: export
+  config:
+    sage_connect:
+      onEnrichExportCriteria:
+# for debugging
+#        EnrichCriteria:
+#          - orderId: 01949314e7eb7342877005679d8269cb
+#            type: product
+
+  mapping:
+#    - key: id
+#      mappedKey: id
+#    - key: versionId
+#      mappedKey: versionId
+
+# Kunde
+    - key: order.orderCustomer.email
+      mappedKey: Kunde.EmailAddress
+    - key: order.billingAddress.country.translations.DEFAULT.name
+      mappedKey: Kunde.Country
+    - key: order.billingAddress.city
+      mappedKey: Kunde.City
+
+# Bestellung
+    - key: order.orderNumber
+      mappedKey: Bestellung.DocumentMatchcode
