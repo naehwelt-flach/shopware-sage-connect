@@ -1,6 +1,8 @@
 <?php
 /** @noinspection PhpUnhandledExceptionInspection */
+
 /** @noinspection PhpInternalEntityUsedInspection */
+
 declare(strict_types=1);
 
 namespace Naehwelt\Shopware;
@@ -53,11 +55,13 @@ readonly class InstallService
             }
             $payload[] = $entity;
         }
-        return new Request([], [], [], [], [], [], json_encode([[
-            'action' => $action,
-            'entity' => $entityName,
-            'payload' => $payload,
-        ]], JSON_THROW_ON_ERROR));
+        return new Request([], [], [], [], [], [], json_encode([
+            [
+                'action' => $action,
+                'entity' => $entityName,
+                'payload' => $payload,
+            ]
+        ], JSON_THROW_ON_ERROR));
     }
 
     private function profiles(): iterable
@@ -67,10 +71,10 @@ readonly class InstallService
             foreach ($mapping as $mappedKey => $key) {
                 is_array($key) || $key = ['key' => $key];
                 yield $key + [
-                    'key' => $mappedKey,
-                    'mappedKey' => $mappedKey,
-                    'position' => $i++,
-                ];
+                        'key' => $mappedKey,
+                        'mappedKey' => $mappedKey,
+                        'position' => $i++,
+                    ];
             }
         };
         yield $this->profileProfile => [

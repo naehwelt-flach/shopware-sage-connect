@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Naehwelt\Shopware\ImportExport;
 
@@ -11,7 +13,7 @@ class FileWriter extends Processing\Writer\AbstractFileWriter
     public function __construct(
         FilesystemOperator $filesystem,
         private readonly AbstractFileHandler $handler,
-    ){
+    ) {
         parent::__construct($filesystem);
     }
 

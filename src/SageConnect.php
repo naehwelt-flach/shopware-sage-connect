@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Naehwelt\Shopware;
 
 use Shopware\Core\Framework\Plugin;
@@ -19,16 +21,16 @@ class SageConnect extends Plugin
         $this->installService($activateContext);
     }
 
-    public function update(UpdateContext $updateContext): void
-    {
-        $this->installService($updateContext);
-    }
-
     private function installService(InstallContext $context): void
     {
         $service = $this->container->get(InstallService::class);
         assert($service instanceof InstallService);
         $service->createImportExportProfileEntity($context->getContext());
         $service->importResources($context->getContext());
+    }
+
+    public function update(UpdateContext $updateContext): void
+    {
+        $this->installService($updateContext);
     }
 }

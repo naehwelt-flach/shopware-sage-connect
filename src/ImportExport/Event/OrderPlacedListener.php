@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Naehwelt\Shopware\ImportExport\Event;
 
@@ -10,7 +12,9 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 #[AsEventListener]
 readonly class OrderPlacedListener
 {
-    public function __construct(private ProcessFactory $processFactory) {}
+    public function __construct(private ProcessFactory $processFactory)
+    {
+    }
 
     public function __invoke(CheckoutOrderPlacedEvent $event): void
     {

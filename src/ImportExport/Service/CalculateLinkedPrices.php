@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Naehwelt\Shopware\ImportExport\Service;
 
@@ -19,52 +21,33 @@ use Symfony\Contracts\Service\ResetInterface;
 
 class CalculateLinkedPrices implements ResetInterface
 {
-    private array $cache = [];
-
     public const MAPPING = [
         ProductDefinition::class => ['tax' => ['price']]
     ];
+    private array $cache = [];
 
     public function __construct(
         readonly private Provider $provider,
         readonly private NetPriceCalculator $netCalculator,
         readonly private GrossPriceCalculator $grossCalculator,
         readonly private array $mapping = self::MAPPING,
-    ){}
+    ) {
+    }
 
-    /**
-     * @return iterable<FkField|ManyToOneAssociationField, PriceField>
-     */
-    private function fields(string $sourceEntity): iterable
+    public function __invoke(ImportExportBeforeImportRecordEvent $event): void
     {
-        $def = $this->provider->definition($sourceEntity);
-        foreach ($this->mapping[$def->getClass()] ?? [] as $taxFieldName => $priceFieldsNames) {
-            $taxField = $def->getField($taxFieldName);
-            foreach ($priceFieldsNames as $priceFieldName) {
-                yield $taxField => $def->getField($priceFieldName);
+        $record = $event->getRecord();
+        $sourceEntity = $event->getConfig()->get('sourceEntity');
+        $calc = $this->calculator($event->getContext());
+        foreach ($this->taxRulesWithPrices($sourceEntity, $record, $event->getContext()) as $taxRules => $field) {
+            $property = $field->getPropertyName();
+            $prices = $field->getSerializer()->decode($field, $record[$property] ?? null);
+            foreach ($prices ?? [] as $id => $price) {
+                $price = $calc($taxRules, $price);
+                $record[$property][$id] = $price->getVars();
             }
         }
-    }
-
-    private function tax(FkField|ManyToOneAssociationField $field, array $record, Context $context): TaxRuleCollection
-    {
-        $id = $record[$field->getPropertyName()][$field->getReferenceField()] ?? null;
-        $entityName = $field->getReferenceDefinition()->getEntityName();
-        /** @noinspection NullPointerExceptionInspection */
-        /** @noinspection PhpPossiblePolymorphicInvocationInspection */
-        return $this->cache[$entityName][$id] ??= new TaxRuleCollection([new TaxRule(
-            $this->provider->entity($this->provider->cl($entityName), $id, $context)->getTaxRate()
-        )]);
-    }
-
-    /**
-     * @return iterable<TaxRuleCollection, PriceField>
-     */
-    private function taxRulesWithPrices(string $sourceEntity, array $record, Context $context): iterable
-    {
-        foreach ($this->fields($sourceEntity) as $fkField => $priceField) {
-            yield $this->tax($fkField, $record, $context) => $priceField;
-        }
+        $event->setRecord($record);
     }
 
     /**
@@ -89,20 +72,39 @@ class CalculateLinkedPrices implements ResetInterface
         };
     }
 
-    public function __invoke(ImportExportBeforeImportRecordEvent $event): void
+    /**
+     * @return iterable<TaxRuleCollection, PriceField>
+     */
+    private function taxRulesWithPrices(string $sourceEntity, array $record, Context $context): iterable
     {
-        $record = $event->getRecord();
-        $sourceEntity = $event->getConfig()->get('sourceEntity');
-        $calc = $this->calculator($event->getContext());
-        foreach ($this->taxRulesWithPrices($sourceEntity, $record, $event->getContext()) as $taxRules => $field) {
-            $property = $field->getPropertyName();
-            $prices = $field->getSerializer()->decode($field, $record[$property] ?? null);
-            foreach ($prices ?? [] as $id => $price) {
-                $price = $calc($taxRules, $price);
-                $record[$property][$id] = $price->getVars();
+        foreach ($this->fields($sourceEntity) as $fkField => $priceField) {
+            yield $this->tax($fkField, $record, $context) => $priceField;
+        }
+    }
+
+    /**
+     * @return iterable<FkField|ManyToOneAssociationField, PriceField>
+     */
+    private function fields(string $sourceEntity): iterable
+    {
+        $def = $this->provider->definition($sourceEntity);
+        foreach ($this->mapping[$def->getClass()] ?? [] as $taxFieldName => $priceFieldsNames) {
+            $taxField = $def->getField($taxFieldName);
+            foreach ($priceFieldsNames as $priceFieldName) {
+                yield $taxField => $def->getField($priceFieldName);
             }
         }
-        $event->setRecord($record);
+    }
+
+    private function tax(FkField|ManyToOneAssociationField $field, array $record, Context $context): TaxRuleCollection
+    {
+        $id = $record[$field->getPropertyName()][$field->getReferenceField()] ?? null;
+        $entityName = $field->getReferenceDefinition()->getEntityName();
+        /** @noinspection NullPointerExceptionInspection */
+        /** @noinspection PhpPossiblePolymorphicInvocationInspection */
+        return $this->cache[$entityName][$id] ??= new TaxRuleCollection([
+            new TaxRule($this->provider->entity($this->provider->cl($entityName), $id, $context)->getTaxRate())
+        ]);
     }
 
     public function reset(): void

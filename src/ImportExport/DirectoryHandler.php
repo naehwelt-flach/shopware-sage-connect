@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Naehwelt\Shopware\ImportExport;
 
@@ -16,7 +18,8 @@ readonly class DirectoryHandler
         private bool $deleteAfterUpload = false,
         private ?LoggerInterface $logger = null,
         private string $logLevel = LogLevel::DEBUG,
-    ) {}
+    ) {
+    }
 
     public function with(
         null|string $location = null,

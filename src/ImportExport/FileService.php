@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Naehwelt\Shopware\ImportExport;
 
@@ -13,7 +15,7 @@ class FileService extends \Shopware\Core\Content\ImportExport\Service\FileServic
         $extension = MimeTypes::getDefault()->getExtensions($profile->getFileType())[0] ?? 'csv';
         $timestamp = date('Ymd-His');
         $label = $profile->getTranslation('label');
-        \assert(\is_string($label));
-        return \sprintf('%s_%s.%s', $label, $timestamp, $extension);
+        assert(is_string($label));
+        return sprintf('%s_%s.%s', $label, $timestamp, $extension);
     }
 }

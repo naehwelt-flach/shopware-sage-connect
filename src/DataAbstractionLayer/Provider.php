@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Naehwelt\Shopware\DataAbstractionLayer;
 
@@ -29,7 +31,8 @@ readonly class Provider
         private DefinitionInstanceRegistry $registry,
         private RequestCriteriaBuilder $criteriaBuilder,
         public Context $defaultContext
-    ) {}
+    ) {
+    }
 
     /**
      * @noinspection PhpDocSignatureInspection
@@ -61,18 +64,19 @@ readonly class Provider
     }
 
     /**
-     * @param class-string<TEntity> $class
+     * @param class-string<TEntity>|string $classOrEntityName
      */
-    public function payloadCriteria(string $class, Request|array $payload, ?Context $context = null): Criteria
+    public function definition(string $classOrEntityName): EntityDefinition
     {
-        $args = [$payload, new Criteria(), $this->definition($class), $context ?? $this->defaultContext];
-        return match (true) {
-            is_array($payload) => $this->criteriaBuilder->fromArray(...$args),
-            default => $this->criteriaBuilder->handleRequest(...$args),
-        };
+        try {
+            return $this->registry->getByClassOrEntityName($classOrEntityName);
+        } catch (DefinitionNotFoundException $e) {
+            return $this->registry->getByEntityClass(new $classOrEntityName);
+        }
     }
 
     /** @noinspection PhpInternalEntityUsedInspection */
+
     public static function criteria(Criteria|string|array $input, Criteria $criteria = null): Criteria
     {
         if ($input instanceof Criteria) {
@@ -92,11 +96,13 @@ readonly class Provider
                     default => $criteria->addFilter($value),
                 };
             } elseif (is_string($field)) {
-                $criteria->addFilter(match(true) {
-                    !is_array($value) => new EqualsFilter($field, $value),
-                    is_string(array_key_first($value)) => new RangeFilter($field, $value),
-                    default => new EqualsAnyFilter($field, $value)
-                });
+                $criteria->addFilter(
+                    match (true) {
+                        !is_array($value) => new EqualsFilter($field, $value),
+                        is_string(array_key_first($value)) => new RangeFilter($field, $value),
+                        default => new EqualsAnyFilter($field, $value)
+                    }
+                );
             } else {
                 is_array($value) ? $criteria->addAssociations($value) : $criteria->addFields([$value]);
             }
@@ -105,15 +111,15 @@ readonly class Provider
     }
 
     /**
-     * @param class-string<TEntity>|string $classOrEntityName
+     * @param class-string<TEntity> $class
      */
-    public function definition(string $classOrEntityName): EntityDefinition
+    public function payloadCriteria(string $class, Request|array $payload, ?Context $context = null): Criteria
     {
-        try {
-            return $this->registry->getByClassOrEntityName($classOrEntityName);
-        } catch(DefinitionNotFoundException $e) {
-            return $this->registry->getByEntityClass(new $classOrEntityName);
-        }
+        $args = [$payload, new Criteria(), $this->definition($class), $context ?? $this->defaultContext];
+        return match (true) {
+            is_array($payload) => $this->criteriaBuilder->fromArray(...$args),
+            default => $this->criteriaBuilder->handleRequest(...$args),
+        };
     }
 
     /**

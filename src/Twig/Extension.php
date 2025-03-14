@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Naehwelt\Shopware\Twig;
@@ -9,7 +10,9 @@ use Twig\TwigFilter;
 
 class Extension extends AbstractExtension
 {
-    public function __construct(readonly Provider $provider) {}
+    public function __construct(readonly Provider $provider)
+    {
+    }
 
     public function getFilters(): iterable
     {

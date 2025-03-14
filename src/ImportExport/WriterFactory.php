@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Naehwelt\Shopware\ImportExport;
 
@@ -8,6 +10,7 @@ use Shopware\Core\Content\ImportExport\Processing;
 class WriterFactory extends Processing\Writer\AbstractWriterFactory
 {
     readonly private object $creator;
+
     public function __construct(
         readonly private string|iterable $types,
         callable|Processing\Writer\AbstractWriter $creator,

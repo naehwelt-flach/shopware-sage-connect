@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Naehwelt\Shopware\ImportExport;
 
@@ -24,7 +26,8 @@ class ProcessFactory
         readonly private string|array|Criteria $profileCriteria,
         readonly private ?string $expireDate = null,
         readonly private array $config = []
-    ) {}
+    ) {
+    }
 
     public function with(
         null|string|array|Criteria $profileCriteria = null,
@@ -71,6 +74,12 @@ class ProcessFactory
         return $this->provider->entity(ImportExportLogEntity::class, $logId);
     }
 
+    public function profile(): ImportExportProfileEntity
+    {
+        $this->profile ??= $this->provider->entity(ImportExportProfileEntity::class, $this->profileCriteria);
+        return $this->profile;
+    }
+
     protected function process(
         string|ImportExportLogEntity $logEntity,
         bool $cancel = false,
@@ -84,11 +93,5 @@ class ProcessFactory
         $req = new Request(request: ['logId' => $logEntity->getId()]);
         $cancel ? $this->controller->cancel($req, $context) : $this->controller->process($req, $context);
         return $logEntity;
-    }
-
-    public function profile(): ImportExportProfileEntity
-    {
-        $this->profile ??= $this->provider->entity(ImportExportProfileEntity::class, $this->profileCriteria);
-        return $this->profile;
     }
 }

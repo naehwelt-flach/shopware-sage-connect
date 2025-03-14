@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Naehwelt\Shopware\ImportExport;
 
@@ -8,6 +10,7 @@ use Shopware\Core\Content\ImportExport\Processing;
 class ReaderFactory extends Processing\Reader\AbstractReaderFactory
 {
     readonly private object $creator;
+
     public function __construct(
         readonly private string|iterable $types,
         callable|Processing\Reader\AbstractReader $creator,

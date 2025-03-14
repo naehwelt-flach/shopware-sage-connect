@@ -1,7 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Naehwelt\Shopware\Filesystem;
 
+use DateTime;
 use League\Flysystem;
 use Shopware\Core\Defaults;
 use Symfony\Component\Filesystem\Path;
@@ -71,6 +74,6 @@ readonly class MountManager
 
     private static function ts(): string
     {
-        return str_replace(' ', 'T', (new \DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT));
+        return str_replace(' ', 'T', (new DateTime())->format(Defaults::STORAGE_DATE_TIME_FORMAT));
     }
 }

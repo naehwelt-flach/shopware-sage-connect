@@ -19,10 +19,18 @@ class EntitySerializer extends BaseEntitySerializer
         yield from $this->expand(parent::serialize($config, $definition, $entity), $expanded, $config, $definition);
     }
 
-    private function expand(iterable|Struct $struct, array $expanded, Config $config, EntityDefinition $definition): iterable
-    {
+    private function expand(
+        iterable|Struct $struct,
+        array $expanded,
+        Config $config,
+        EntityDefinition $definition
+    ): iterable {
         if ($struct instanceof Entity) {
-            $struct = $this->serializerRegistry->getEntity($definition->getEntityName())->serialize($config, $definition, $struct);
+            $struct = $this->serializerRegistry->getEntity($definition->getEntityName())->serialize(
+                $config,
+                $definition,
+                $struct
+            );
         } elseif ($struct instanceof Struct) {
             $struct = $struct->jsonSerialize();
         }
