@@ -13,6 +13,8 @@ use Naehwelt\Shopware\Twig;
 use Shopware\Core\Checkout\Cart\Price\GrossPriceCalculator;
 use Shopware\Core\Checkout\Cart\Price\NetPriceCalculator;
 use Shopware\Core\Content\ImportExport\Controller\ImportExportActionController;
+use Shopware\Core\Content\ImportExport\DataAbstractionLayer\Serializer\Field\FieldSerializer;
+use Shopware\Core\Content\ImportExport\DataAbstractionLayer\Serializer\PrimaryKeyResolver;
 use Shopware\Core\Content\ImportExport\Event;
 use Shopware\Core\Content\ImportExport\Service\FileService;
 use Shopware\Core\Framework\Adapter\Filesystem\FilesystemFactory;
@@ -66,20 +68,28 @@ return static function(ContainerConfigurator $container): void {
                 inline_service(Context::class)->factory([Context::class, 'createDefaultContext'])
             ])
 
+        ->set(PrimaryKeyResolver::class, ImportExport\Serializer\PrimaryKeyResolver::class)
+            ->args([
+                service(DefinitionInstanceRegistry::class),
+                service(FieldSerializer::class),
+            ])
+        ->alias(ImportExport\Serializer\PrimaryKeyResolver::class, PrimaryKeyResolver::class)
+
         ->set(ImportExport\Serializer\EntitySerializer::class)
             ->tag('shopware.import_export.entity_serializer', ['priority' => -900])
 
         ->set(ImportExport\EventSubscriber::class)
             ->args([
+                service(ImportExport\Serializer\PrimaryKeyResolver::class),
                 tagged_iterator(Event\ImportExportBeforeImportRowEvent::class),
-                tagged_iterator(Event\ImportExportBeforeImportRecordEvent::class),
+                tagged_iterator(ImportExport\Event\BeforeImportRecordEvent::class),
                 tagged_iterator(Event\EnrichExportCriteriaEvent::class),
             ])
             ->tag('kernel.event_subscriber')
 
         ->set(ImportExport\Service\DefaultProductVisibilities::class)
             ->args([service(DataAbstractionLayer\Provider::class)])
-            ->tag(Event\ImportExportBeforeImportRowEvent::class)
+            ->tag(ImportExport\Event\BeforeImportRecordEvent::class)
 
         ->set(ImportExport\Service\CalculateLinkedPrices::class)
             ->args([
@@ -87,7 +97,7 @@ return static function(ContainerConfigurator $container): void {
                 service(NetPriceCalculator::class),
                 service(GrossPriceCalculator::class),
             ])
-            ->tag(Event\ImportExportBeforeImportRecordEvent::class)
+            ->tag(ImportExport\Event\BeforeImportRecordEvent::class)
 
         ->set(ImportExport\Service\EnrichCriteria::class)
             ->tag(Event\EnrichExportCriteriaEvent::class)

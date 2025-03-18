@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Naehwelt\Shopware\ImportExport;
 
+use Naehwelt\Shopware\ImportExport\Event\BeforeImportRecordEvent;
+use Naehwelt\Shopware\ImportExport\Serializer\PrimaryKeyResolver;
 use Naehwelt\Shopware\SageConnect;
 use ReflectionFunction;
 use ReflectionMethod;
@@ -20,6 +22,7 @@ readonly class EventSubscriber implements EventSubscriberInterface
     private iterable $services;
 
     public function __construct(
+        private PrimaryKeyResolver $primaryKeyResolver,
         iterable $beforeImportRowServices,
         iterable $beforeImportRecordServices,
         iterable $enrichExportCriteriaServices,
@@ -29,7 +32,7 @@ readonly class EventSubscriber implements EventSubscriberInterface
     ) {
         $this->services = [
             ImportExportBeforeImportRowEvent::class => [...$this->mapNamespaces($beforeImportRowServices)],
-            ImportExportBeforeImportRecordEvent::class => [...$this->mapNamespaces($beforeImportRecordServices)],
+            BeforeImportRecordEvent::class => [...$this->mapNamespaces($beforeImportRecordServices)],
             EnrichExportCriteriaEvent::class => [...$this->mapNamespaces($enrichExportCriteriaServices)],
         ];
     }
@@ -84,7 +87,7 @@ readonly class EventSubscriber implements EventSubscriberInterface
     }
 
     private function onEvent(
-        ImportExportBeforeImportRowEvent|ImportExportBeforeImportRecordEvent|EnrichExportCriteriaEvent $event,
+        ImportExportBeforeImportRowEvent|BeforeImportRecordEvent|EnrichExportCriteriaEvent $event,
         string $key,
         Config $config = null
     ): void {
@@ -101,7 +104,18 @@ readonly class EventSubscriber implements EventSubscriberInterface
 
     public function onBeforeImportRecord(ImportExportBeforeImportRecordEvent $event): void
     {
-        $this->onEvent($event, __FUNCTION__);
+        $config = $event->getConfig();
+        $record = $event->getRecord();
+        $resolved = $this->primaryKeyResolver->resolved($config, $record);
+        $this->onEvent($subEvent = new BeforeImportRecordEvent(
+            $resolved === PrimaryKeyResolver::RESOLVED_NONE,
+            $resolved === PrimaryKeyResolver::RESOLVED_MAPPED,
+            $record,
+            $event->getRow(),
+            $config,
+            $event->getContext()
+        ), __FUNCTION__);
+        $event->setRecord($subEvent->getRecord());
     }
 
     public function onEnrichExportCriteria(EnrichExportCriteriaEvent $event): void

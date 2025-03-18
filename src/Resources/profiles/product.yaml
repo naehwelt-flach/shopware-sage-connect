@@ -7,8 +7,8 @@
     updateEntities: true
     sage_connect:
       onBeforeImportRow:
-        DefaultProductVisibilities: []
       onBeforeImportRecord:
+        DefaultProductVisibilities: []
         CalculateLinkedPrices: []
 
   update_by:
