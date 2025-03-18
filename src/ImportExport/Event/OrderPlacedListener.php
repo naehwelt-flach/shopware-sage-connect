@@ -16,8 +16,14 @@ readonly class OrderPlacedListener
     {
     }
 
+    /**
+     * @see \Shopware\Core\Checkout\Cart\SalesChannel\CartOrderRoute::order
+     */
     public function __invoke(CheckoutOrderPlacedEvent $event): void
     {
-        $this->processFactory->sendMessage(params: EnrichCriteria::params($event->getOrder()->getId()));
+        $this->processFactory->sendMessage(params: EnrichCriteria::params([[
+            'orderId' => $event->getOrder()->getId(),
+            'type' => 'product'
+        ]]));
     }
 }

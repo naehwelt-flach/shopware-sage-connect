@@ -172,7 +172,7 @@ return static function(ContainerConfigurator $container): void {
             ->args([
                 inline_service(ImportExport\ProcessFactory::class)
                     ->factory([service(ImportExport\ProcessFactory::class), 'with'])
-                    ->args([['technicalName' => 'default_orders']]) // todo
+                    ->args([['technicalName' => 'sage_connect_order_line_item']])
             ])
 
         ->set(InstallService::class)->public()

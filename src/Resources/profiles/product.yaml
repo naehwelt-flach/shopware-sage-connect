@@ -58,3 +58,7 @@
       mappedKey: active
       useDefaultValue: true
       defaultValue: true
+    - key: translations.DEFAULT.customSearchKeywords
+      mappedKey: keywords
+    - key: id
+      mappedKey: id

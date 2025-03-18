@@ -2,6 +2,7 @@
   label: SageConnect-Profil OrderLineItem
   source_entity: order_line_item
   type: export
+
   config:
     sage_connect:
       onEnrichExportCriteria:
@@ -27,3 +28,14 @@
 # Bestellung
     - key: order.orderNumber
       mappedKey: Bestellung.DocumentMatchcode
+
+
+# Positionen
+    - key: product.productNumber
+      mappedKey: Positionen.ItemNumber
+    - key: product.translations.DEFAULT.name
+      mappedKey: Positionen.LongDescription
+    - key: quantity
+      mappedKey: Positionen.Quantity
+    - key: unitPrice
+      mappedKey: Positionen.UnitPrice
