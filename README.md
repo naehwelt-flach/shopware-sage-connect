@@ -10,7 +10,7 @@
   "repositories": [
     {
       "type": "path",
-      "url": "custom/plugins/*",
+      "url": "custom/static-plugins/*",
       "options": {
         "symlink": true
       }
@@ -22,7 +22,7 @@
 ```
 
 ```
-# custom/plugins/.gitignore
+# custom/static-plugins/.gitignore
 
 /*
 !/NaehweltSageConnect/
@@ -34,7 +34,7 @@
 # Add git submodule to your project
 git submodule add -b main \
   https://github.com/naehwelt-flach/shopware-sage-connect.git \
-  custom/plugins/NaehweltSageConnect/
+  custom/static-plugins/NaehweltSageConnect/
 
 # The installation process DOES NOT automatically import `src/Resources/profiles/*.yaml`.
 # It ONLY creates import messages in the queue (e.g., the `log_entry` table). 
@@ -70,6 +70,7 @@ return static function(ContainerConfigurator $container): void {
             ->factory([service(ImportExport\DirectoryHandler::class), 'with'])
             ->args([
                 '$location' => $prefix,
+                '$deleteAfterUpload' => true,
                 '$processFactory' => ['profileCriteria' => ['technicalName' => $technicalName]]
             ])
             ->tag(MessageQueue\EveryFiveMinutesHandler::class);
