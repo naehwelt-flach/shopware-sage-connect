@@ -54,27 +54,21 @@ bin/console import:entity --printErrors \
 ```
 
 
-### configuration example
+### directory handler configuration example
 
 ```php
 # config/services.php
 
 return static function(ContainerConfigurator $container): void {
-    $services = $container->services()->defaults()->autowire()->autoconfigure();
     ...
-    foreach ([
-        'product_prices/' => 'sage_connect_product_prices',
+    $container->parameters()->set(SageConnect::DIRECTORY_HANDLERS, [
         'product/' => 'sage_connect_product',
-    ] as $prefix => $technicalName) {
-        $services->set(ImportExport\DirectoryHandler::class . ".$prefix", ImportExport\DirectoryHandler::class)
-            ->factory([service(ImportExport\DirectoryHandler::class), 'with'])
-            ->args([
-                '$location' => $prefix,
-                '$deleteAfterUpload' => true,
-                '$processFactory' => ['profileCriteria' => ['technicalName' => $technicalName]]
-            ])
-            ->tag(MessageQueue\EveryFiveMinutesHandler::class);
-    }
+        'product-hourly-persistent/' => [
+            'profile' => 'sage_connect_product',
+            'deleteAfterUpload' => false,
+            'period' => MessageQueue\EveryHourHandler::class
+        ],
+    ]);
     ...
 }
 ```

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
+
 use Naehwelt\Shopware\InstallService;
 use Naehwelt\Shopware\Filesystem;
 use Naehwelt\Shopware\ImportExport;
@@ -10,6 +11,7 @@ use Naehwelt\Shopware\DataAbstractionLayer;
 use Naehwelt\Shopware\MessageQueue;
 use Naehwelt\Shopware\SageConnect;
 use Naehwelt\Shopware\Twig;
+use ReflectionClass;
 use Shopware\Core\Checkout\Cart\Price\GrossPriceCalculator;
 use Shopware\Core\Checkout\Cart\Price\NetPriceCalculator;
 use Shopware\Core\Content\ImportExport\Controller\ImportExportActionController;
@@ -26,6 +28,12 @@ use Shopware\Core\Framework\DataAbstractionLayer\Search\RequestCriteriaBuilder;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 return static function(ContainerConfigurator $container): void {
+
+    /* @see SageConnect::processDirectoryHandlers */
+    $container->parameters()->set(SageConnect::DIRECTORY_HANDLERS, [
+        'product/' => 'sage_connect_product',
+    ]);
+
     $services = $container->services()->defaults()->autowire()->autoconfigure();
 
     $set = function ($id, $class = null, array $args = []) use ($services) : string|ServiceConfigurator {
@@ -44,7 +52,7 @@ return static function(ContainerConfigurator $container): void {
         MessageQueue\EveryFiveMinutesHandler::class,
         MessageQueue\EveryHourHandler::class,
     ] as $handler) {
-        foreach ((new \ReflectionClass($handler))->getAttributes(AsMessageHandler::class) as $ref) {
+        foreach ((new ReflectionClass($handler))->getAttributes(AsMessageHandler::class) as $ref) {
             /** @var AsMessageHandler $attr */
             if (($attr = $ref->newInstance())->handles) {
                 $services
