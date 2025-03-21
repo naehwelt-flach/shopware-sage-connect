@@ -98,8 +98,12 @@ class CalculateLinkedPrices implements ResetInterface
 
     private function tax(FkField|ManyToOneAssociationField $field, array $record, Context $context): TaxRuleCollection
     {
-        $id = $record[$field->getPropertyName()][$field->getReferenceField()] ?? null;
         $entityName = $field->getReferenceDefinition()->getEntityName();
+        $id = $record[$field->getPropertyName()][$field->getReferenceField()] ?? null;
+        if (!$id) {
+            // todo fix it
+            return $this->cache[$entityName][$id] ??= new TaxRuleCollection([]);
+        }
         /** @noinspection NullPointerExceptionInspection */
         /** @noinspection PhpPossiblePolymorphicInvocationInspection */
         return $this->cache[$entityName][$id] ??= new TaxRuleCollection([
