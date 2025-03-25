@@ -86,6 +86,9 @@ return static function(ContainerConfigurator $container): void {
         ->set(ImportExport\Serializer\EntitySerializer::class)
             ->tag('shopware.import_export.entity_serializer', ['priority' => -900])
 
+        ->set(ImportExport\Serializer\FieldSerializer::class)
+            ->tag('shopware.import_export.field_serializer', ['priority' => -900])
+
         ->set(ImportExport\EventSubscriber::class)
             ->args([
                 service(ImportExport\Serializer\PrimaryKeyResolver::class),
