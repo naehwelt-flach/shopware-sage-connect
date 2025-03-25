@@ -19,23 +19,79 @@
 
 # Kunde
     - key: order.orderCustomer.email
-      mappedKey: Kunde.EmailAddress
-    - key: order.billingAddress.country.translations.DEFAULT.name
-      mappedKey: Kunde.Country
+      mappedKey: billingEmail #Kunde.EmailAddress
+
+    - key: order.billingAddress.firstName
+      mappedKey: billingFirstName #Kunde.Name1
+
+    - key: order.billingAddress.lastName
+      mappedKey: billingLastName
+
+    - key: order.billingAddress.country.iso
+      mappedKey: billingCountry #Kunde.CountryCode
+
+    - key: order.billingAddress.zipcode
+      mappedKey: billingZip #Kunde.PostalCode
+
     - key: order.billingAddress.city
-      mappedKey: Kunde.City
+      mappedKey: billingCity #Kunde.City
+
+    - key: order.billingAddress.street
+      mappedKey: billingStreet #Kunde.Street
+
+    - key: order.billingAddress.additionalAddressLine1
+      mappedKey: billingAdditional #Kunde.PostalAddition
 
 # Bestellung
     - key: order.orderNumber
-      mappedKey: Bestellung.DocumentMatchcode
+      mappedKey: orderNumber #Bestellung.DocumentMatchcode
 
+    - key: order.orderDate
+      mappedKey: orderDate #Bestellung.DocumentDate
+
+    - key: order.transactions.paymentMethod.technicalName
+      mappedKey: paymentMethod #Bestellung.PaymentCondition
+
+    - key: order.deliveries.shippingMethod.technicalName
+      mappedKey: shippingMethod #Bestellung.Shipper
+
+    - key: order.transactions.customFields.swag_paypal_order_id
+      mappedKey: paymentPaypal #Bestellung.USER_Zahlungsreferenz
+
+    - key: order.deliveries.shippingOrderAddress.country.iso
+      mappedKey: shippingCountry #Bestellung.ShippingCountryCode
+
+    - key: order.deliveries.shippingOrderAddress.zipcode
+      mappedKey: shippingZip #Bestellung.ShippingPostalCode
+
+    - key: order.deliveries.shippingOrderAddress.city
+      mappedKey: shippingCity #Bestellung.ShippingCity
+
+    - key: order.deliveries.shippingOrderAddress.street
+      mappedKey: shippingStreet #Bestellung.ShippingStreet
+
+    - key: order.deliveries.shippingOrderAddress.firstName
+      mappedKey: shippingFirstName #Bestellung.ShippingName1
+
+    - key: order.deliveries.shippingOrderAddress.lastName
+      mappedKey: shippingLastName #Bestellung.ShippingName1
+
+    - key: order.deliveries.shippingOrderAddress.additionalAddressLine1
+      mappedKey: shippingAdditional #Bestellung.ShippingPostalAddition
 
 # Positionen
     - key: product.productNumber
-      mappedKey: Positionen.ItemNumber
+      mappedKey: itemNumber #Positionen.ItemNumber
+
     - key: product.translations.DEFAULT.name
-      mappedKey: Positionen.LongDescription
+      mappedKey: itemName #Positionen.LongDescription
+
     - key: quantity
-      mappedKey: Positionen.Quantity
-    - key: unitPrice
-      mappedKey: Positionen.UnitPrice
+      mappedKey: itemQuantity #Positionen.Quantity
+
+    - key: unitPrice # computed field, requires custom field serializer
+      mappedKey: itemUnitPrice #Positionen.UnitPrice
+
+# Zuschläge
+    - key: order.shippingTotal
+      mappedKey: shippingTotal # Zuschläge.Amount
