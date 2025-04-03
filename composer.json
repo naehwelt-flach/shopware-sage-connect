@@ -21,10 +21,5 @@
         "psr-4": {
             "Naehwelt\\Shopware\\": "src/"
         }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Naehwelt\\Shopware\\Tests\\": "tests/"
-        }
     }
 }
