@@ -7,6 +7,8 @@ namespace Naehwelt\Shopware\ImportExport;
 use Naehwelt\Shopware\ImportExport\Event\BeforeImportRecordEvent;
 use Naehwelt\Shopware\ImportExport\Serializer\PrimaryKeyResolver;
 use Naehwelt\Shopware\SageConnect;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionParameter;
@@ -16,17 +18,20 @@ use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRowEvent;
 use Shopware\Core\Content\ImportExport\Processing;
 use Shopware\Core\Content\ImportExport\Struct\Config;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Throwable;
 
-readonly class EventSubscriber implements EventSubscriberInterface
+class EventSubscriber implements EventSubscriberInterface, LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     private iterable $services;
 
     public function __construct(
-        private PrimaryKeyResolver $primaryKeyResolver,
+        readonly private PrimaryKeyResolver $primaryKeyResolver,
         iterable $beforeImportRowServices,
         iterable $beforeImportRecordServices,
         iterable $enrichExportCriteriaServices,
-        private array $namespaces = [
+        readonly private array $namespaces = [
             __NAMESPACE__ . '\\Service\\' => ''
         ]
     ) {
@@ -94,10 +99,14 @@ readonly class EventSubscriber implements EventSubscriberInterface
         $config ??= $event->getConfig();
         $configuredServices = (array)($config->get(SageConnect::id())[$key] ?? null);
         foreach ($configuredServices as $name => $params) {
-            $cl = $event::class;
-            $service = $this->services[$cl][$name] ?? null;
-            if ($service) {
-                $service($event, (array)$params);
+            try {
+                $cl = $event::class;
+                $service = $this->services[$cl][$name] ?? null;
+                if ($service) {
+                    $service($event, (array)$params);
+                }
+            } catch (Throwable $error) {
+                $this->logger->error($error->getMessage(), ['e' => $error]);
             }
         }
     }
@@ -107,14 +116,17 @@ readonly class EventSubscriber implements EventSubscriberInterface
         $config = $event->getConfig();
         $record = $event->getRecord();
         $resolved = $this->primaryKeyResolver->resolved($config, $record);
-        $this->onEvent($subEvent = new BeforeImportRecordEvent(
-            $resolved === PrimaryKeyResolver::RESOLVED_NONE,
-            $resolved === PrimaryKeyResolver::RESOLVED_MAPPED,
-            $record,
-            $event->getRow(),
-            $config,
-            $event->getContext()
-        ), __FUNCTION__);
+        $this->onEvent(
+            $subEvent = new BeforeImportRecordEvent(
+                $resolved === PrimaryKeyResolver::RESOLVED_NONE,
+                $resolved === PrimaryKeyResolver::RESOLVED_MAPPED,
+                $record,
+                $event->getRow(),
+                $config,
+                $event->getContext()
+            ),
+            __FUNCTION__
+        );
         $event->setRecord($subEvent->getRecord());
     }
 

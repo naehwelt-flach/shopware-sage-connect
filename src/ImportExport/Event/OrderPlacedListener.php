@@ -6,12 +6,17 @@ namespace Naehwelt\Shopware\ImportExport\Event;
 
 use Naehwelt\Shopware\ImportExport\ProcessFactory;
 use Naehwelt\Shopware\ImportExport\Service\EnrichCriteria;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 use Shopware\Core\Checkout\Cart\Event\CheckoutOrderPlacedEvent;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Throwable;
 
 #[AsEventListener]
-readonly class OrderPlacedListener
+class OrderPlacedListener implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     public function __construct(private ProcessFactory $processFactory)
     {
     }
@@ -21,9 +26,15 @@ readonly class OrderPlacedListener
      */
     public function __invoke(CheckoutOrderPlacedEvent $event): void
     {
-        $this->processFactory->sendMessage(params: EnrichCriteria::params([[
-            'orderId' => $event->getOrder()->getId(),
-            'type' => 'product'
-        ]]));
+        try {
+            $this->processFactory->sendMessage(params: EnrichCriteria::params([
+                [
+                    'orderId' => $event->getOrder()->getId(),
+                    'type' => 'product'
+                ]
+            ]));
+        } catch (Throwable $error) {
+            $this->logger->error($error->getMessage(), ['e' => $error]);
+        }
     }
 }
