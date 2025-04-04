@@ -57,16 +57,22 @@ class CalculateLinkedPrices implements ResetInterface
     {
         $rounding = $context->getRounding();
         return function (TaxRuleCollection $taxRules, Price $price) use ($rounding) {
-            if (!$price->getNet()) {
-                $qpd = new QuantityPriceDefinition($price->getGross(), $taxRules);
-                $calc = $this->grossCalculator->calculate($qpd, $rounding);
-                $taxes = $calc->getCalculatedTaxes()->getAmount();
-                $price->setNet($price->getGross() - $taxes);
-            } elseif (!$price->getGross()) {
-                $qpd = new QuantityPriceDefinition($price->getNet(), $taxRules);
-                $calc = $this->netCalculator->calculate($qpd, $rounding);
-                $taxes = $calc->getCalculatedTaxes()->getAmount();
-                $price->setGross($price->getNet() + $taxes);
+            foreach ([$price, $price->getListPrice(), $price->getRegulationPrice()] as $item) {
+                if (!$item instanceof Price || !$price->getLinked()) {
+                    continue;
+                }
+                if (!$item->getNet()) {
+                    $qpd = new QuantityPriceDefinition($item->getGross(), $taxRules);
+                    $calc = $this->grossCalculator->calculate($qpd, $rounding);
+                    $taxes = $calc->getCalculatedTaxes()->getAmount();
+                    $item->setNet($item->getGross() - $taxes);
+
+                } elseif (!$item->getGross()) {
+                    $qpd = new QuantityPriceDefinition($item->getNet(), $taxRules);
+                    $calc = $this->netCalculator->calculate($qpd, $rounding);
+                    $taxes = $calc->getCalculatedTaxes()->getAmount();
+                    $item->setGross($price->getNet() + $taxes);
+                }
             }
             return $price;
         };
