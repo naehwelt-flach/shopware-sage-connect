@@ -30,9 +30,10 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 return static function(ContainerConfigurator $container): void {
 
     /* @see SageConnect::processDirectoryHandlers */
-    $container->parameters()->set(SageConnect::DIRECTORY_HANDLERS, [
-        'product/' => 'sage_connect_product',
-    ]);
+    $container->parameters()
+        ->set(SageConnect::DIRECTORY_HANDLERS, ['product/' => 'sage_connect_product'])
+        ->set(SageConnect::ORDER_PLACED_PROFILE, 'sage_connect_order_line_item')
+    ;
 
     $services = $container->services()->defaults()->autowire()->autoconfigure();
 
@@ -183,7 +184,7 @@ return static function(ContainerConfigurator $container): void {
             ->args([
                 inline_service(ImportExport\ProcessFactory::class)
                     ->factory([service(ImportExport\ProcessFactory::class), 'with'])
-                    ->args([['technicalName' => 'sage_connect_order_line_item']])
+                    ->args([['technicalName' => param(SageConnect::ORDER_PLACED_PROFILE)]])
             ])
 
         ->set(InstallService::class)->public()
