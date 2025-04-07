@@ -147,16 +147,16 @@ return static function(ContainerConfigurator $container): void {
             ])
             ->tag('shopware.import_export.reader_factory')
 
-        ->set(SageConnect::id('.filesystem.temp'), PrefixFilesystem::class)
+        ->set(SageConnect::FS_TEMP, PrefixFilesystem::class)
             ->args([
                 service('shopware.filesystem.temp'),
-                'plugins/' . SageConnect::id()
+                'plugins/' . SageConnect::ID
             ])
 
         ->set(Filesystem\MountManager::class)->public()
             ->args([
-                service(SageConnect::id('.filesystem.private')),
-                service(SageConnect::id('.filesystem.temp')),
+                service(SageConnect::FS_PRIVATE),
+                service(SageConnect::FS_TEMP),
                 service('mime_types'),
             ])
 
@@ -173,7 +173,7 @@ return static function(ContainerConfigurator $container): void {
                 service(ImportExport\ProcessFactory::class),
             ])
 
-        ->set(SageConnect::id('.filesystem.resources'), PrefixFilesystem::class)
+        ->set(SageConnect::FS_RESOURCES, PrefixFilesystem::class)
             ->factory([service(FilesystemFactory::class), 'privateFactory'])
             ->args([[
                 'type' => 'local',
@@ -197,7 +197,7 @@ return static function(ContainerConfigurator $container): void {
                         '$mountManager' => inline_service(Filesystem\MountManager::class)
                             ->factory([service(Filesystem\MountManager::class), 'with'])
                             ->args([
-                                service(SageConnect::id('.filesystem.resources')),
+                                service(SageConnect::FS_RESOURCES),
                             ]),
                         '$location' => ''
                     ])

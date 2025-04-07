@@ -17,6 +17,9 @@ class SageConnect extends Plugin implements CompilerPassInterface
     public const ID = 'sage_connect';
     public const DIRECTORY_HANDLERS = self::ID . '.directory.handlers';
     public const ORDER_PLACED_PROFILE = self::ID . '.order.placed.profile';
+    public const FS_RESOURCES = self::ID . '.filesystem.resources';
+    public const FS_TEMP = self::ID . '.filesystem.temp';
+    public const FS_PRIVATE = self::ID . '.filesystem.private';
 
     public static function id(string $id = ''): string
     {
