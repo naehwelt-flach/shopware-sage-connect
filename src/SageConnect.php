@@ -65,7 +65,10 @@ class SageConnect extends Plugin implements CompilerPassInterface
             )->setFactory([new Reference(ImportExport\DirectoryHandler::class), 'with'])
                 ->addArgument($location)
                 ->addArgument($config['deleteAfterUpload'] ?? true)
-                ->addArgument($config['criteria'] ?? ['profileCriteria' => ['technicalName' => $config['profile']]])
+                ->addArgument($config['criteria'] ?? [
+                    'profileCriteria' => ['technicalName' => $config['profile']],
+                    'expireDate' => '+1 week',
+                ])
                 ->addTag($config['period'] ?? MessageQueue\EveryFiveMinutesHandler::class);
         }
     }

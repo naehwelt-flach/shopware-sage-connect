@@ -184,7 +184,10 @@ return static function(ContainerConfigurator $container): void {
             ->args([
                 inline_service(ImportExport\ProcessFactory::class)
                     ->factory([service(ImportExport\ProcessFactory::class), 'with'])
-                    ->args([['technicalName' => param(SageConnect::ORDER_PLACED_PROFILE)]])
+                    ->args([
+                        ['technicalName' => param(SageConnect::ORDER_PLACED_PROFILE)],
+                        '+1 month'
+                    ])
             ])
 
         ->set(InstallService::class)->public()
