@@ -17,7 +17,7 @@ class OrderPlacedListener implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
-    public function __construct(private ProcessFactory $processFactory)
+    public function __construct(readonly private ProcessFactory $processFactory)
     {
     }
 
@@ -28,10 +28,7 @@ class OrderPlacedListener implements LoggerAwareInterface
     {
         try {
             $this->processFactory->sendMessage(params: EnrichCriteria::params([
-                [
-                    'orderId' => $event->getOrder()->getId(),
-                    'type' => 'product'
-                ]
+                ['orderId' => $event->getOrder()->getId()]
             ]));
         } catch (Throwable $error) {
             $this->logger->error($error->getMessage(), ['e' => $error]);

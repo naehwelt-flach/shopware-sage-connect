@@ -6,92 +6,129 @@
   config:
     sage_connect:
       onEnrichExportCriteria:
-# for debugging
-#        EnrichCriteria:
-#          - orderId: 01949314e7eb7342877005679d8269cb
-#            type: product
+      ### for debugging
+      # EnrichCriteria:
+      #   - orderId: 01949314e7eb7342877005679d8269cb
+      #     type: product
 
   mapping:
-#    - key: id
-#      mappedKey: id
-#    - key: versionId
-#      mappedKey: versionId
 
-# Kunde
+    ### Kunde
+
     - key: order.orderCustomer.email
-      mappedKey: billingEmail #Kunde.EmailAddress
+      mappedKey: billingEmail
+
+    - key: order.billingAddress.salutation.salutationKey
+      mappedKey: billingSalutation
 
     - key: order.billingAddress.firstName
-      mappedKey: billingFirstName #Kunde.Name1
+      mappedKey: billingFirstName
 
     - key: order.billingAddress.lastName
       mappedKey: billingLastName
 
     - key: order.billingAddress.country.iso
-      mappedKey: billingCountry #Kunde.CountryCode
+      mappedKey: billingCountry
 
     - key: order.billingAddress.zipcode
-      mappedKey: billingZip #Kunde.PostalCode
+      mappedKey: billingZip
 
     - key: order.billingAddress.city
-      mappedKey: billingCity #Kunde.City
+      mappedKey: billingCity
 
     - key: order.billingAddress.street
-      mappedKey: billingStreet #Kunde.Street
+      mappedKey: billingStreet
+
+    - key: order.orderCustomer.vatIds
+      mappedKey: billingVatId
+
+    - key: order.billingAddress.phoneNumber
+      mappedKey: billingPhone
 
     - key: order.billingAddress.additionalAddressLine1
-      mappedKey: billingAdditional #Kunde.PostalAddition
+      mappedKey: billingAdditional
 
-# Bestellung
+    ### Bestellung
+
     - key: order.orderNumber
-      mappedKey: orderNumber #Bestellung.DocumentMatchcode
+      mappedKey: orderNumber
 
     - key: order.orderDate
-      mappedKey: orderDate #Bestellung.DocumentDate
+      mappedKey: orderDate
 
     - key: order.transactions.paymentMethod.technicalName
-      mappedKey: paymentMethod #Bestellung.PaymentCondition
+      mappedKey: paymentMethod
+
+    - key: order.transactions.customFields.swag_paypal_resource_id
+      mappedKey: paymentId
 
     - key: order.deliveries.shippingMethod.technicalName
-      mappedKey: shippingMethod #Bestellung.Shipper
-
-    - key: order.transactions.customFields.swag_paypal_order_id
-      mappedKey: paymentPaypal #Bestellung.USER_Zahlungsreferenz
+      mappedKey: shippingMethod
 
     - key: order.deliveries.shippingOrderAddress.country.iso
-      mappedKey: shippingCountry #Bestellung.ShippingCountryCode
+      mappedKey: shippingCountry
 
     - key: order.deliveries.shippingOrderAddress.zipcode
-      mappedKey: shippingZip #Bestellung.ShippingPostalCode
+      mappedKey: shippingZip
 
     - key: order.deliveries.shippingOrderAddress.city
-      mappedKey: shippingCity #Bestellung.ShippingCity
+      mappedKey: shippingCity
 
     - key: order.deliveries.shippingOrderAddress.street
-      mappedKey: shippingStreet #Bestellung.ShippingStreet
+      mappedKey: shippingStreet
+
+    - key: order.deliveries.shippingOrderAddress.salutation.salutationKey
+      mappedKey: shippingSalutation
 
     - key: order.deliveries.shippingOrderAddress.firstName
-      mappedKey: shippingFirstName #Bestellung.ShippingName1
+      mappedKey: shippingFirstName
 
     - key: order.deliveries.shippingOrderAddress.lastName
-      mappedKey: shippingLastName #Bestellung.ShippingName1
+      mappedKey: shippingLastName
+
+    - key: order.deliveries.shippingOrderAddress.phoneNumber
+      mappedKey: shippingPhone
+
+    - key: order.customerComment
+      mappedKey: customerComment
 
     - key: order.deliveries.shippingOrderAddress.additionalAddressLine1
-      mappedKey: shippingAdditional #Bestellung.ShippingPostalAddition
+      mappedKey: shippingAdditional
 
-# Positionen
-    - key: product.productNumber
-      mappedKey: itemNumber #Positionen.ItemNumber
+    ### Positionen
 
-    - key: product.translations.DEFAULT.name
-      mappedKey: itemName #Positionen.LongDescription
+    - key: type
+      mappedKey: type
+
+    - key: label
+      mappedKey: label
 
     - key: quantity
-      mappedKey: itemQuantity #Positionen.Quantity
+      mappedKey: quantity
 
     - key: unitPrice # computed field, requires custom field serializer
-      mappedKey: itemUnitPrice #Positionen.UnitPrice
+      mappedKey: unitPrice
 
-# Zuschläge
+    # Product
+
+    - key: product.productNumber
+      mappedKey: productNumber
+
+    # Rabatt
+
+    - key: payload.value
+      mappedKey: discountValue
+
+    - key: payload.code
+      mappedKey: discountCode
+
+    - key: payload.discountScope
+      mappedKey: discountScope
+
+    - key: payload.discountType
+      mappedKey: discountType
+
+    ### Zuschläge
+
     - key: order.shippingTotal
-      mappedKey: shippingTotal # Zuschläge.Amount
+      mappedKey: shippingTotal
