@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
+use Naehwelt\Shopware\Checkout\PaymentProcessorDecorator;
 use Naehwelt\Shopware\InstallService;
 use Naehwelt\Shopware\Filesystem;
 use Naehwelt\Shopware\ImportExport;
@@ -14,6 +15,7 @@ use Naehwelt\Shopware\Twig;
 use ReflectionClass;
 use Shopware\Core\Checkout\Cart\Price\GrossPriceCalculator;
 use Shopware\Core\Checkout\Cart\Price\NetPriceCalculator;
+use Shopware\Core\Checkout\Payment\PaymentProcessor;
 use Shopware\Core\Content\ImportExport\Controller\ImportExportActionController;
 use Shopware\Core\Content\ImportExport\DataAbstractionLayer\Serializer\Field\FieldSerializer;
 use Shopware\Core\Content\ImportExport\DataAbstractionLayer\Serializer\PrimaryKeyResolver;
@@ -180,8 +182,10 @@ return static function(ContainerConfigurator $container): void {
                 'config' => ['root' => dirname(__DIR__)]
             ]])
 
-        ->set(ImportExport\Event\OrderPlacedListener::class)
+        ->set(PaymentProcessorDecorator::class)
+            ->decorate(PaymentProcessor::class)
             ->args([
+                service('.inner'),
                 inline_service(ImportExport\ProcessFactory::class)
                     ->factory([service(ImportExport\ProcessFactory::class), 'with'])
                     ->args([

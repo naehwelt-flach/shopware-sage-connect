@@ -21,7 +21,7 @@ class ProcessFactory
     private ImportExportProfileEntity $profile;
 
     public function __construct(
-        readonly private Provider $provider,
+        readonly public Provider $provider,
         readonly private ImportExportActionController $controller,
         readonly private string|array|Criteria $profileCriteria,
         readonly private ?string $expireDate = null,
