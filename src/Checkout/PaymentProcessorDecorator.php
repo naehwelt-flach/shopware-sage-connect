@@ -11,12 +11,10 @@ use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionEntity;
 use Shopware\Core\Checkout\Order\OrderEntity;
 use Shopware\Core\Checkout\Payment\Cart\Token\TokenStruct;
-use Shopware\Core\Checkout\Payment\Event\FinalizePaymentOrderTransactionCriteriaEvent;
 use Shopware\Core\Checkout\Payment\PaymentProcessor;
 use Shopware\Core\Framework\Struct\Struct;
 use Shopware\Core\Framework\Validation\DataBag\RequestDataBag;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
-use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Throwable;
@@ -34,15 +32,8 @@ class PaymentProcessorDecorator extends PaymentProcessor
     ) {
     }
 
-    #[AsEventListener]
-    public function onFinalize(FinalizePaymentOrderTransactionCriteriaEvent $event): void
-    {
-        // export after finalization, for async payments (PayPal)
-        $this->exportMessage('payment_finalize', $event->getOrderTransactionId());
-    }
-
     /** @noinspection NullPointerExceptionInspection */
-    private function exportMessage(string $log, string|bool $transactionId = null, string $orderId = null): void
+    private function exportMessage(string $msg, string|bool $transactionId = null, string $orderId = null): void
     {
         try {
             $context = [
@@ -65,7 +56,7 @@ class PaymentProcessorDecorator extends PaymentProcessor
                     'orderCustomer' => $order->getOrderCustomer(),
                 ];
             }
-            $this->logger->info($log, $context);
+            $this->logger->info($msg, $context);
             if ($transactionId && $orderId) {
                 $this->processFactory->sendMessage(params: EnrichCriteria::params([['orderId' => $orderId]]));
             }
@@ -81,15 +72,18 @@ class PaymentProcessorDecorator extends PaymentProcessor
         ?string $finishUrl = null,
         ?string $errorUrl = null,
     ): ?RedirectResponse {
-        $res = [$this->inner, __FUNCTION__](...func_get_args());
+        $return = [$this->inner, __FUNCTION__](...func_get_args());
         // export directly, only for immediate payments (cash in advance)
-        $this->exportMessage('payment_pay', !$res, $orderId);
-        return $res;
+        $this->exportMessage(__FUNCTION__, !$return, $orderId);
+        return $return;
     }
 
     public function finalize(TokenStruct $token, Request $request, SalesChannelContext $context): TokenStruct
     {
-        return [$this->inner, __FUNCTION__](...func_get_args());
+        $return = [$this->inner, __FUNCTION__](...func_get_args());
+        // export after finalization, for async payments (PayPal)
+        $this->exportMessage(__FUNCTION__, $return->getTransactionId());
+        return $return;
     }
 
     public function validate(Cart $cart, RequestDataBag $dataBag, SalesChannelContext $salesChannelContext): ?Struct
