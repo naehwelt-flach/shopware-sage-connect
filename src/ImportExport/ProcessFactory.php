@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Naehwelt\Shopware\ImportExport;
 
 use Naehwelt\Shopware\DataAbstractionLayer\Provider;
+use Psr\Log\LoggerInterface;
 use Shopware\Core\Content\ImportExport\Aggregate\ImportExportLog\ImportExportLogEntity;
 use Shopware\Core\Content\ImportExport\Controller\ImportExportActionController;
 use Shopware\Core\Content\ImportExport\ImportExportProfileEntity;
@@ -16,16 +17,17 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * @psalm-type UploadFileOrArgs UploadedFile|array{path: string, originalName: string, mimeType: string}|null
  */
-class ProcessFactory
+readonly class ProcessFactory
 {
     private ImportExportProfileEntity $profile;
 
     public function __construct(
-        readonly public Provider $provider,
-        readonly private ImportExportActionController $controller,
-        readonly private string|array|Criteria $profileCriteria,
-        readonly private ?string $expireDate = null,
-        readonly private array $config = []
+        public Provider $provider,
+        private ImportExportActionController $controller,
+        private string|array|Criteria $profileCriteria,
+        private LoggerInterface $logger,
+        private ?string $expireDate = null,
+        private array $config = []
     ) {
     }
 
@@ -38,6 +40,7 @@ class ProcessFactory
             $this->provider,
             $this->controller,
             $profileCriteria ?? $this->profileCriteria,
+            $this->logger,
             $expireDate ?? $this->expireDate,
             $config ?? $this->config,
         );
@@ -92,6 +95,7 @@ class ProcessFactory
         }
         $req = new Request(request: ['logId' => $logEntity->getId()]);
         $cancel ? $this->controller->cancel($req, $context) : $this->controller->process($req, $context);
+        $this->logger->debug(__METHOD__, ['logEntity' => $logEntity, 'cancel' => $cancel]);
         return $logEntity;
     }
 }

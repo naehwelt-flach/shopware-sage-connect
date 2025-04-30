@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Naehwelt\Shopware\ImportExport;
 
 use Naehwelt\Shopware\Filesystem\MountManager;
-use Psr\Log\LoggerInterface;
-use Psr\Log\LogLevel;
 use Shopware\Core\Framework\Context;
 
 readonly class DirectoryHandler
@@ -16,8 +14,6 @@ readonly class DirectoryHandler
         public ProcessFactory $processFactory,
         private string $location = '',
         private bool $deleteAfterUpload = false,
-        private ?LoggerInterface $logger = null,
-        private string $logLevel = LogLevel::DEBUG,
     ) {
     }
 
@@ -41,10 +37,7 @@ readonly class DirectoryHandler
         $fileType = $this->processFactory->profile()->getFileType();
         $copy = !$this->deleteAfterUpload;
         foreach ($this->mountManager->files($fileType, $this->location, copy: $copy) as $import => $_) {
-            $logEntity = $this->processFactory->sendMessage($import, context: $context);
-            $this->logger?->log($this->logLevel, __METHOD__ . " ---> {logEntity}", [
-                'logEntity' => $logEntity,
-            ]);
+            $this->processFactory->sendMessage($import, context: $context);
         }
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use Monolog\Handler\RotatingFileHandler;
+use Monolog\Level;
 use Naehwelt\Shopware\Checkout\PaymentProcessorDecorator;
 use Naehwelt\Shopware\InstallService;
 use Naehwelt\Shopware\Filesystem;
@@ -28,24 +29,24 @@ use Shopware\Core\Framework\Api\Controller\SyncController;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\DefinitionInstanceRegistry;
 use Shopware\Core\Framework\DataAbstractionLayer\Search\RequestCriteriaBuilder;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-return static function(ContainerConfigurator $container): void {
-
+return static function(ContainerConfigurator $container, ContainerBuilder $builder): void {
     /* @see SageConnect::processDirectoryHandlers */
     $container->parameters()
         ->set(SageConnect::DIRECTORY_HANDLERS, ['product/' => 'sage_connect_product'])
         ->set(SageConnect::ORDER_PLACED_PROFILE, 'sage_connect_order_line_item')
     ;
-
     $container->extension('monolog', [
         'channels' => [SageConnect::ID],
         'handlers' => [
             SageConnect::ID => [
                 'type' => 'filter',
                 'handler' => SageConnect::id('_rotate'),
-                'max_level' => 'info',
+                'max_level' => Level::Warning->name,
                 'channels' => [SageConnect::ID],
+                ...($builder->getParameter('kernel.debug') ? [] : ['min_level' => Level::Info->name])
             ],
             SageConnect::id('_rotate') => [
                 'type' => 'rotating_file',
@@ -55,6 +56,8 @@ return static function(ContainerConfigurator $container): void {
             ],
         ]
     ]);
+
+    $logger = service('monolog.logger.' . SageConnect::ID);
 
     $services = $container->services()->defaults()->autowire()->autoconfigure();
 
@@ -117,6 +120,7 @@ return static function(ContainerConfigurator $container): void {
                 tagged_iterator(Event\ImportExportBeforeImportRowEvent::class),
                 tagged_iterator(ImportExport\Event\BeforeImportRecordEvent::class),
                 tagged_iterator(Event\EnrichExportCriteriaEvent::class),
+                $logger,
             ])
             ->tag('kernel.event_subscriber')
 
@@ -186,6 +190,7 @@ return static function(ContainerConfigurator $container): void {
                 service(DataAbstractionLayer\Provider::class),
                 service(ImportExportActionController::class),
                 [],
+                $logger,
             ])
 
         ->set(ImportExport\DirectoryHandler::class)
@@ -211,7 +216,7 @@ return static function(ContainerConfigurator $container): void {
                         ['technicalName' => param(SageConnect::ORDER_PLACED_PROFILE)],
                         '+1 month'
                     ]),
-                service('monolog.logger.' . SageConnect::ID),
+                $logger,
             ])
 
         ->set(InstallService::class)->public()

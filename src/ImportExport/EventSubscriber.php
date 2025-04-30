@@ -7,8 +7,7 @@ namespace Naehwelt\Shopware\ImportExport;
 use Naehwelt\Shopware\ImportExport\Event\BeforeImportRecordEvent;
 use Naehwelt\Shopware\ImportExport\Serializer\PrimaryKeyResolver;
 use Naehwelt\Shopware\SageConnect;
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionParameter;
@@ -20,18 +19,17 @@ use Shopware\Core\Content\ImportExport\Struct\Config;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Throwable;
 
-class EventSubscriber implements EventSubscriberInterface, LoggerAwareInterface
+readonly class EventSubscriber implements EventSubscriberInterface
 {
-    use LoggerAwareTrait;
-
     private iterable $services;
 
     public function __construct(
-        readonly private PrimaryKeyResolver $primaryKeyResolver,
+        private PrimaryKeyResolver $primaryKeyResolver,
         iterable $beforeImportRowServices,
         iterable $beforeImportRecordServices,
         iterable $enrichExportCriteriaServices,
-        readonly private array $namespaces = [
+        private LoggerInterface $logger,
+        private array $namespaces = [
             __NAMESPACE__ . '\\Service\\' => ''
         ]
     ) {

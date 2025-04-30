@@ -6,7 +6,6 @@ namespace Naehwelt\Shopware\Checkout;
 
 use Naehwelt\Shopware\ImportExport\ProcessFactory;
 use Naehwelt\Shopware\ImportExport\Service\EnrichCriteria;
-use Naehwelt\Shopware\SageConnect;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionEntity;
@@ -38,7 +37,7 @@ class PaymentProcessorDecorator extends PaymentProcessor
     public function onFinalize(FinalizePaymentOrderTransactionCriteriaEvent $event): void
     {
         // export after finalization, for async payments (PayPal)
-        $this->exportMessage(SageConnect::id('_payment_finalize'), $event->getOrderTransactionId());
+        $this->exportMessage('payment_finalize', $event->getOrderTransactionId());
     }
 
     private function exportMessage(string $log, string|bool $transaction = null, string $order = null): void
@@ -66,7 +65,7 @@ class PaymentProcessorDecorator extends PaymentProcessor
     ): ?RedirectResponse {
         $res = [$this->inner, __FUNCTION__](...func_get_args());
         // export directly, only for immediate payments (cash in advance)
-        $this->exportMessage(SageConnect::id('_payment_pay'), !$res, $orderId);
+        $this->exportMessage('payment_pay', !$res, $orderId);
         return $res;
     }
 
