@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
+use Monolog\Handler\RotatingFileHandler;
 use Naehwelt\Shopware\Checkout\PaymentProcessorDecorator;
 use Naehwelt\Shopware\InstallService;
 use Naehwelt\Shopware\Filesystem;
@@ -36,6 +37,24 @@ return static function(ContainerConfigurator $container): void {
         ->set(SageConnect::DIRECTORY_HANDLERS, ['product/' => 'sage_connect_product'])
         ->set(SageConnect::ORDER_PLACED_PROFILE, 'sage_connect_order_line_item')
     ;
+
+    $container->extension('monolog', [
+        'channels' => [SageConnect::ID],
+        'handlers' => [
+            SageConnect::ID => [
+                'type' => 'filter',
+                'handler' => SageConnect::id('_rotate'),
+                'max_level' => 'info',
+                'channels' => [SageConnect::ID],
+            ],
+            SageConnect::id('_rotate') => [
+                'type' => 'rotating_file',
+                'filename_format' => '{date}-{filename}',
+                'date_format' => RotatingFileHandler::FILE_PER_MONTH,
+                'path' => '%kernel.logs_dir%/' . SageConnect::id('.log'),
+            ],
+        ]
+    ]);
 
     $services = $container->services()->defaults()->autowire()->autoconfigure();
 
@@ -191,7 +210,8 @@ return static function(ContainerConfigurator $container): void {
                     ->args([
                         ['technicalName' => param(SageConnect::ORDER_PLACED_PROFILE)],
                         '+1 month'
-                    ])
+                    ]),
+                service('monolog.logger.' . SageConnect::ID),
             ])
 
         ->set(InstallService::class)->public()

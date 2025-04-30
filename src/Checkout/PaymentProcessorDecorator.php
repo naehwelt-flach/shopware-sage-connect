@@ -7,8 +7,7 @@ namespace Naehwelt\Shopware\Checkout;
 use Naehwelt\Shopware\ImportExport\ProcessFactory;
 use Naehwelt\Shopware\ImportExport\Service\EnrichCriteria;
 use Naehwelt\Shopware\SageConnect;
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerInterface;
 use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionEntity;
 use Shopware\Core\Checkout\Payment\Cart\Token\TokenStruct;
@@ -22,22 +21,21 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Throwable;
 
-#[AsEventListener]
-class PaymentProcessorDecorator extends PaymentProcessor implements LoggerAwareInterface
+class PaymentProcessorDecorator extends PaymentProcessor
 {
-    use LoggerAwareTrait;
-
     /**
      * @noinspection MagicMethodsValidityInspection
      * @noinspection PhpMissingParentConstructorInspection
      */
     public function __construct(
         readonly private PaymentProcessor $inner,
-        readonly private ProcessFactory $processFactory
+        readonly private ProcessFactory $processFactory,
+        readonly private LoggerInterface $logger,
     ) {
     }
 
-    public function __invoke(FinalizePaymentOrderTransactionCriteriaEvent $event): void
+    #[AsEventListener]
+    public function onFinalize(FinalizePaymentOrderTransactionCriteriaEvent $event): void
     {
         // export after finalization, for async payments (PayPal)
         $this->exportMessage(SageConnect::id('_payment_finalize'), $event->getOrderTransactionId());
