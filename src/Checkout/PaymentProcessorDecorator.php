@@ -9,6 +9,7 @@ use Naehwelt\Shopware\ImportExport\Service\EnrichCriteria;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionEntity;
+use Shopware\Core\Checkout\Order\OrderEntity;
 use Shopware\Core\Checkout\Payment\Cart\Token\TokenStruct;
 use Shopware\Core\Checkout\Payment\Event\FinalizePaymentOrderTransactionCriteriaEvent;
 use Shopware\Core\Checkout\Payment\PaymentProcessor;
@@ -40,16 +41,33 @@ class PaymentProcessorDecorator extends PaymentProcessor
         $this->exportMessage('payment_finalize', $event->getOrderTransactionId());
     }
 
-    private function exportMessage(string $log, string|bool $transaction = null, string $order = null): void
+    /** @noinspection NullPointerExceptionInspection */
+    private function exportMessage(string $log, string|bool $transactionId = null, string $orderId = null): void
     {
         try {
-            if (is_string($transaction)) {
-                $entity = $this->processFactory->provider->entity(OrderTransactionEntity::class, $transaction);
-                $order = $entity?->getOrderId();
+            $context = [
+                'transactionId' => $transactionId,
+                'orderId' => $orderId,
+            ];
+            if (is_string($transactionId)) {
+                $transaction = $this->processFactory->provider->entity(OrderTransactionEntity::class, $transactionId);
+                $orderId = $transaction->getOrderId();
+                $context += [
+                    'transactionUpdated' => $transaction->getUpdatedAt(),
+                    'transactionCustomFields' => $transaction->getCustomFields()
+                ];
             }
-            $this->logger->info($log, ['order' => $order, 'transaction' => $transaction]);
-            if ($transaction && $order) {
-                $this->processFactory->sendMessage(params: EnrichCriteria::params([['orderId' => $order]]));
+            if ($orderId) {
+                $order = $this->processFactory->provider->entity(OrderEntity::class, $orderId);
+                $context += [
+                    'orderNumber' => $order->getOrderNumber(),
+                    'orderDateTime' => $order->getOrderDateTime(),
+                    'orderCustomer' => $order->getOrderCustomer(),
+                ];
+            }
+            $this->logger->info($log, $context);
+            if ($transactionId && $orderId) {
+                $this->processFactory->sendMessage(params: EnrichCriteria::params([['orderId' => $orderId]]));
             }
         } catch (Throwable $error) {
             $this->logger->error($error->getMessage(), ['e' => $error]);
