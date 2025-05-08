@@ -122,7 +122,6 @@ return static function(ContainerConfigurator $container, ContainerBuilder $build
                 tagged_iterator(Event\EnrichExportCriteriaEvent::class),
                 $logger,
             ])
-            ->tag('kernel.event_subscriber')
 
         ->set(ImportExport\Service\DefaultProductVisibilities::class)
             ->args([service(DataAbstractionLayer\Provider::class)])

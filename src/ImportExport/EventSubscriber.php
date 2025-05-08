@@ -16,10 +16,10 @@ use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent
 use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRowEvent;
 use Shopware\Core\Content\ImportExport\Processing;
 use Shopware\Core\Content\ImportExport\Struct\Config;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Throwable;
 
-readonly class EventSubscriber implements EventSubscriberInterface
+readonly class EventSubscriber
 {
     private iterable $services;
 
@@ -56,8 +56,13 @@ readonly class EventSubscriber implements EventSubscriberInterface
 
     public static function params(string|array|callable $target, array $params): array
     {
+        static $map = [
+            ImportExportBeforeImportRowEvent::class => 'onBeforeImportRow',
+            ImportExportBeforeImportRecordEvent::class => 'onBeforeImportRecord',
+            EnrichExportCriteriaEvent::class => 'onEnrichExportCriteria',
+        ];
         $class = self::refParams($target)[0]->getType()?->getName();
-        return [SageConnect::id() => [self::getSubscribedEvents()[$class] => $params]];
+        return [SageConnect::id() => [$map[$class] => $params]];
     }
 
     /**
@@ -75,15 +80,7 @@ readonly class EventSubscriber implements EventSubscriberInterface
         return (new ReflectionFunction($target(...)))->getParameters();
     }
 
-    public static function getSubscribedEvents(): array
-    {
-        return [
-            ImportExportBeforeImportRowEvent::class => 'onBeforeImportRow',
-            ImportExportBeforeImportRecordEvent::class => 'onBeforeImportRecord',
-            EnrichExportCriteriaEvent::class => 'onEnrichExportCriteria',
-        ];
-    }
-
+    #[AsEventListener]
     public function onBeforeImportRow(ImportExportBeforeImportRowEvent $event): void
     {
         $this->onEvent($event, __FUNCTION__);
@@ -109,6 +106,7 @@ readonly class EventSubscriber implements EventSubscriberInterface
         }
     }
 
+    #[AsEventListener]
     public function onBeforeImportRecord(ImportExportBeforeImportRecordEvent $event): void
     {
         $config = $event->getConfig();
@@ -128,6 +126,7 @@ readonly class EventSubscriber implements EventSubscriberInterface
         $event->setRecord($subEvent->getRecord());
     }
 
+    #[AsEventListener]
     public function onEnrichExportCriteria(EnrichExportCriteriaEvent $event): void
     {
         $this->onEvent($event, __FUNCTION__, Config::fromLog($event->getLogEntity()));
