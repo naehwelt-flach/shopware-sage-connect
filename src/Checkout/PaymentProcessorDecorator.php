@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Naehwelt\Shopware\Checkout;
 
-use Naehwelt\Shopware\ImportExport\ProcessFactory;
+use Naehwelt\Shopware\DataAbstractionLayer\Provider;
 use Naehwelt\Shopware\ImportExport\Service\EnrichCriteria;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Checkout\Cart\Cart;
@@ -27,7 +27,8 @@ class PaymentProcessorDecorator extends PaymentProcessor
      */
     public function __construct(
         readonly private PaymentProcessor $inner,
-        readonly private ProcessFactory $processFactory,
+        readonly private Provider $provider,
+        readonly private EnrichCriteria $enrichCriteria,
         readonly private LoggerInterface $logger,
     ) {
     }
@@ -41,7 +42,7 @@ class PaymentProcessorDecorator extends PaymentProcessor
                 'orderId' => $orderId,
             ];
             if (is_string($transactionId)) {
-                $transaction = $this->processFactory->provider->entity(OrderTransactionEntity::class, $transactionId);
+                $transaction = $this->provider->entity(OrderTransactionEntity::class, $transactionId);
                 $orderId = $transaction->getOrderId();
                 $context += [
                     'transactionUpdated' => $transaction->getUpdatedAt(),
@@ -49,7 +50,7 @@ class PaymentProcessorDecorator extends PaymentProcessor
                 ];
             }
             if ($orderId) {
-                $order = $this->processFactory->provider->entity(OrderEntity::class, $orderId);
+                $order = $this->provider->entity(OrderEntity::class, $orderId);
                 $context += [
                     'orderNumber' => $order->getOrderNumber(),
                     'orderDateTime' => $order->getOrderDateTime(),
@@ -58,7 +59,7 @@ class PaymentProcessorDecorator extends PaymentProcessor
             }
             $this->logger->info($msg, $context);
             if ($transactionId && $orderId) {
-                $this->processFactory->sendMessage(params: EnrichCriteria::params([['orderId' => $orderId]]));
+                $this->enrichCriteria->sendMessage($order);
             }
         } catch (Throwable $error) {
             $this->logger->error($error->getMessage(), ['e' => $error]);

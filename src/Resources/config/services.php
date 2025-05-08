@@ -136,6 +136,15 @@ return static function(ContainerConfigurator $container, ContainerBuilder $build
             ->tag(ImportExport\Event\BeforeImportRecordEvent::class)
 
         ->set(ImportExport\Service\EnrichCriteria::class)
+            ->args([
+                inline_service(ImportExport\ProcessFactory::class)
+                    ->factory([service(ImportExport\ProcessFactory::class), 'with'])
+                    ->args([
+                        ['technicalName' => param(SageConnect::ORDER_PLACED_PROFILE)],
+                        '+1 month'
+                    ]),
+                service(FileService::class),
+            ])
             ->tag(Event\EnrichExportCriteriaEvent::class)
 
         ->set(FileService::class)
@@ -209,12 +218,8 @@ return static function(ContainerConfigurator $container, ContainerBuilder $build
             ->decorate(PaymentProcessor::class)
             ->args([
                 service('.inner'),
-                inline_service(ImportExport\ProcessFactory::class)
-                    ->factory([service(ImportExport\ProcessFactory::class), 'with'])
-                    ->args([
-                        ['technicalName' => param(SageConnect::ORDER_PLACED_PROFILE)],
-                        '+1 month'
-                    ]),
+                service(DataAbstractionLayer\Provider::class),
+                service(ImportExport\Service\EnrichCriteria::class),
                 $logger,
             ])
 
