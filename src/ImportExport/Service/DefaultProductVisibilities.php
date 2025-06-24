@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Naehwelt\Shopware\ImportExport\Service;
 
 use Naehwelt\Shopware\DataAbstractionLayer\Provider;
-use Naehwelt\Shopware\ImportExport\Event\BeforeImportRecordEvent;
+use Naehwelt\Shopware\ImportExport\Serializer\PrimaryKeyResolver;
 use Shopware\Core\Content\ImportExport\DataAbstractionLayer\Serializer\Entity\ProductSerializer;
+use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent;
 use Shopware\Core\Content\ImportExport\Processing;
 use Shopware\Core\Content\ImportExport\Struct\Config;
 use Shopware\Core\Content\Product\Aggregate\ProductVisibility\ProductVisibilityDefinition;
@@ -28,9 +29,9 @@ class DefaultProductVisibilities implements ResetInterface
         $this->cache = new WeakMap();
     }
 
-    public function __invoke(BeforeImportRecordEvent $event, array $params): void
+    public function __invoke(ImportExportBeforeImportRecordEvent $event, int $resolved, array $params): void
     {
-        if (!$event->isInserted) {
+        if ($resolved !== PrimaryKeyResolver::RESOLVED_NONE) {
             return;
         }
         $record = $event->getRecord();

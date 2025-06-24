@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Naehwelt\Shopware\ImportExport\Service;
 
 use Naehwelt\Shopware\DataAbstractionLayer\Provider;
-use Naehwelt\Shopware\ImportExport\Event\BeforeImportRecordEvent;
 use Shopware\Core\Checkout\Cart\Price\GrossPriceCalculator;
 use Shopware\Core\Checkout\Cart\Price\NetPriceCalculator;
 use Shopware\Core\Checkout\Cart\Price\Struct\QuantityPriceDefinition;
 use Shopware\Core\Checkout\Cart\Tax\Struct\TaxRule;
 use Shopware\Core\Checkout\Cart\Tax\Struct\TaxRuleCollection;
+use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent;
 use Shopware\Core\Content\Product\ProductDefinition;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\DataAbstractionLayer\Field\FkField;
@@ -34,7 +34,7 @@ class CalculateLinkedPrices implements ResetInterface
     ) {
     }
 
-    public function __invoke(BeforeImportRecordEvent $event): void
+    public function __invoke(ImportExportBeforeImportRecordEvent $event): void
     {
         $record = $event->getRecord();
         $sourceEntity = $event->getConfig()->get('sourceEntity');

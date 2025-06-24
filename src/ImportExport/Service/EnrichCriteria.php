@@ -22,7 +22,11 @@ readonly class EnrichCriteria
 
     public function sendMessage(OrderEntity $order): void
     {
-        $params = EventSubscriber::params(self::class, [self::class => [['orderId' => $order->getId()]]]);
+        $params = EventSubscriber::params(
+            EventSubscriber::ON_ENRICH_EXPORT_CRITERIA,
+            self::class,
+            [['orderId' => $order->getId()]]
+        );
         $log = $this->processFactory->sendMessage(params: $params);
         $file = $this->processFactory->provider->entity(ImportExportFileEntity::class, $log->getFileId());
         if ($file) {
@@ -31,6 +35,7 @@ readonly class EnrichCriteria
             ]);
         }
     }
+
     protected function getFileName(string $originalName, OrderEntity $order): string
     {
         return "{$order->getOrderNumber()}-$originalName";

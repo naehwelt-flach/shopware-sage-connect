@@ -4,45 +4,37 @@ declare(strict_types=1);
 
 namespace Naehwelt\Shopware\ImportExport;
 
-use Naehwelt\Shopware\ImportExport\Event\BeforeImportRecordEvent;
 use Naehwelt\Shopware\ImportExport\Serializer\PrimaryKeyResolver;
 use Naehwelt\Shopware\SageConnect;
 use Psr\Log\LoggerInterface;
-use ReflectionFunction;
-use ReflectionMethod;
-use ReflectionParameter;
 use Shopware\Core\Content\ImportExport\Event\EnrichExportCriteriaEvent;
 use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent;
 use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRowEvent;
 use Shopware\Core\Content\ImportExport\Processing;
 use Shopware\Core\Content\ImportExport\Struct\Config;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Contracts\Service\ResetInterface;
 use Throwable;
 
-readonly class EventSubscriber
+class EventSubscriber implements ResetInterface
 {
-    private iterable $services;
+    public const ON_BEFORE_IMPORT_ROW = 'onBeforeImportRow';
+    public const ON_BEFORE_IMPORT_RECORD = 'onBeforeImportRecord';
+    public const ON_ENRICH_EXPORT_CRITERIA = 'onEnrichExportCriteria';
+
+    private array $cache;
 
     public function __construct(
-        private PrimaryKeyResolver $primaryKeyResolver,
-        iterable $beforeImportRowServices,
-        iterable $beforeImportRecordServices,
-        iterable $enrichExportCriteriaServices,
-        private LoggerInterface $logger,
-        private array $namespaces = [
-            __NAMESPACE__ . '\\Service\\' => ''
-        ]
+        private readonly PrimaryKeyResolver $primaryKeyResolver,
+        private readonly array $services,
+        private readonly LoggerInterface $logger,
+        private readonly array $namespaces = [__NAMESPACE__ . '\\Service\\' => '']
     ) {
-        $this->services = [
-            ImportExportBeforeImportRowEvent::class => [...$this->mapNamespaces($beforeImportRowServices)],
-            BeforeImportRecordEvent::class => [...$this->mapNamespaces($beforeImportRecordServices)],
-            EnrichExportCriteriaEvent::class => [...$this->mapNamespaces($enrichExportCriteriaServices)],
-        ];
     }
 
-    private function mapNamespaces(iterable $services): iterable
+    private function mapNamespaces(string $tag): iterable
     {
-        foreach ($services as $service) {
+        foreach ($this->services[$tag] ?? [] as $service) {
             $class = $service::class;
             yield $class => $service;
             foreach ($this->namespaces as $ns => $alias) {
@@ -54,55 +46,39 @@ readonly class EventSubscriber
         }
     }
 
-    public static function params(string|array|callable $target, array $params): array
+    private function services(Config|array $config, string $tag): iterable
     {
-        static $map = [
-            ImportExportBeforeImportRowEvent::class => 'onBeforeImportRow',
-            ImportExportBeforeImportRecordEvent::class => 'onBeforeImportRecord',
-            EnrichExportCriteriaEvent::class => 'onEnrichExportCriteria',
-        ];
-        $class = self::refParams($target)[0]->getType()?->getName();
-        return [SageConnect::id() => [$map[$class] => $params]];
+        $config instanceof Config && $config = $config->get(SageConnect::ID);
+        foreach ((array)($config[$tag] ?? null) as $name => $params) {
+            $this->cache[$tag] ??= [...$this->mapNamespaces($tag)];
+            $service = $this->cache[$tag][$name] ?? null;
+            if ($service) {
+                yield $service => (array)$params;
+            } else {
+                $this->logger->info("Service '$tag/$name' not found");
+            }
+        }
     }
 
-    /**
-     * @return ReflectionParameter[]
-     */
-    private static function refParams(string|array|callable $target): array
+    private function tryAndCatch(callable $callback, ...$args): void
     {
-        is_string($target) && new ReflectionMethod($target, '__invoke');
-        if (is_string($target)) {
-            $target = explode('::', $target, 2) + [1 => '__invoke'];
+        try {
+            $callback(...$args);
+        } catch (Throwable $error) {
+            $this->logger->error($error->getMessage(), ['e' => $error]);
         }
-        if (is_array($target) && method_exists(...$target)) {
-            return (new ReflectionMethod(...$target))->getParameters();
-        }
-        return (new ReflectionFunction($target(...)))->getParameters();
+    }
+
+    public static function params(string $on, string $service, array $params): array
+    {
+        return [SageConnect::id() => [$on => [$service => $params]]];
     }
 
     #[AsEventListener]
     public function onBeforeImportRow(ImportExportBeforeImportRowEvent $event): void
     {
-        $this->onEvent($event, __FUNCTION__);
-    }
-
-    private function onEvent(
-        ImportExportBeforeImportRowEvent|BeforeImportRecordEvent|EnrichExportCriteriaEvent $event,
-        string $key,
-        Config $config = null
-    ): void {
-        $config ??= $event->getConfig();
-        $configuredServices = (array)($config->get(SageConnect::id())[$key] ?? null);
-        foreach ($configuredServices as $name => $params) {
-            try {
-                $cl = $event::class;
-                $service = $this->services[$cl][$name] ?? null;
-                if ($service) {
-                    $service($event, (array)$params);
-                }
-            } catch (Throwable $error) {
-                $this->logger->error($error->getMessage(), ['e' => $error]);
-            }
+        foreach ($this->services($event->getConfig(), self::ON_BEFORE_IMPORT_ROW) as $service => $params) {
+            $this->tryAndCatch(fn() => $service($event, $params));
         }
     }
 
@@ -111,24 +87,21 @@ readonly class EventSubscriber
     {
         $config = $event->getConfig();
         $record = $event->getRecord();
-        $resolved = $this->primaryKeyResolver->resolved($config, $record);
-        $this->onEvent(
-            $subEvent = new BeforeImportRecordEvent(
-                $resolved === PrimaryKeyResolver::RESOLVED_NONE,
-                $resolved === PrimaryKeyResolver::RESOLVED_MAPPED,
-                $record,
-                $event->getRow(),
-                $config,
-                $event->getContext()
-            ),
-            __FUNCTION__
-        );
-        $event->setRecord($subEvent->getRecord());
+        foreach ($this->services($config, self::ON_BEFORE_IMPORT_RECORD) as $service => $params) {
+            $this->tryAndCatch(fn() => $service($event, $this->primaryKeyResolver->resolved($config, $record), $params));
+        }
     }
 
     #[AsEventListener]
     public function onEnrichExportCriteria(EnrichExportCriteriaEvent $event): void
     {
-        $this->onEvent($event, __FUNCTION__, Config::fromLog($event->getLogEntity()));
+        foreach ($this->services(Config::fromLog($event->getLogEntity()), self::ON_ENRICH_EXPORT_CRITERIA) as $service => $params) {
+            $this->tryAndCatch(fn() => $service($event, $params));
+        }
+    }
+
+    public function reset(): void
+    {
+        $this->cache = [];
     }
 }

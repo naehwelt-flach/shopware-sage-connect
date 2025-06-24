@@ -21,7 +21,6 @@ use Shopware\Core\Checkout\Payment\PaymentProcessor;
 use Shopware\Core\Content\ImportExport\Controller\ImportExportActionController;
 use Shopware\Core\Content\ImportExport\DataAbstractionLayer\Serializer\Field\FieldSerializer;
 use Shopware\Core\Content\ImportExport\DataAbstractionLayer\Serializer\PrimaryKeyResolver;
-use Shopware\Core\Content\ImportExport\Event;
 use Shopware\Core\Content\ImportExport\Service\FileService;
 use Shopware\Core\Framework\Adapter\Filesystem\FilesystemFactory;
 use Shopware\Core\Framework\Adapter\Filesystem\PrefixFilesystem;
@@ -72,6 +71,12 @@ return static function(ContainerConfigurator $container, ContainerBuilder $build
         return $id;
     };
 
+    $taggedIterators = function (string ...$tags) {
+        foreach ($tags as $tag) {
+            yield $tag => tagged_iterator(SageConnect::id($tag));
+        }
+    };
+
     foreach ([
         MessageQueue\EveryMinuteHandler::class,
         MessageQueue\EveryFiveMinutesHandler::class,
@@ -117,15 +122,17 @@ return static function(ContainerConfigurator $container, ContainerBuilder $build
         ->set(ImportExport\EventSubscriber::class)
             ->args([
                 service(ImportExport\Serializer\PrimaryKeyResolver::class),
-                tagged_iterator(Event\ImportExportBeforeImportRowEvent::class),
-                tagged_iterator(ImportExport\Event\BeforeImportRecordEvent::class),
-                tagged_iterator(Event\EnrichExportCriteriaEvent::class),
+                [...$taggedIterators(
+                    ImportExport\EventSubscriber::ON_BEFORE_IMPORT_ROW,
+                    ImportExport\EventSubscriber::ON_BEFORE_IMPORT_RECORD,
+                    ImportExport\EventSubscriber::ON_ENRICH_EXPORT_CRITERIA,
+                )],
                 $logger,
             ])
 
         ->set(ImportExport\Service\DefaultProductVisibilities::class)
             ->args([service(DataAbstractionLayer\Provider::class)])
-            ->tag(ImportExport\Event\BeforeImportRecordEvent::class)
+            ->tag(SageConnect::id(ImportExport\EventSubscriber::ON_BEFORE_IMPORT_RECORD))
 
         ->set(ImportExport\Service\CalculateLinkedPrices::class)
             ->args([
@@ -133,7 +140,7 @@ return static function(ContainerConfigurator $container, ContainerBuilder $build
                 service(NetPriceCalculator::class),
                 service(GrossPriceCalculator::class),
             ])
-            ->tag(ImportExport\Event\BeforeImportRecordEvent::class)
+            ->tag(SageConnect::id(ImportExport\EventSubscriber::ON_BEFORE_IMPORT_RECORD))
 
         ->set(ImportExport\Service\EnrichCriteria::class)
             ->args([
@@ -145,7 +152,7 @@ return static function(ContainerConfigurator $container, ContainerBuilder $build
                     ]),
                 service(FileService::class),
             ])
-            ->tag(Event\EnrichExportCriteriaEvent::class)
+            ->tag(SageConnect::id(ImportExport\EventSubscriber::ON_ENRICH_EXPORT_CRITERIA))
 
         ->set(FileService::class)
             ->class(ImportExport\FileService::class)

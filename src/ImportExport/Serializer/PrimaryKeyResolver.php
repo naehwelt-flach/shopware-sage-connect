@@ -14,7 +14,7 @@ use Shopware\Core\Framework\Struct\ArrayStruct;
 
 class PrimaryKeyResolver extends BasePrimaryKeyResolver
 {
-    public const RESOLVED_NONE = 0;
+    public const RESOLVED_NONE = 0; // inserted
     public const RESOLVED_MAPPED = 1;
     public const RESOLVED_PRIMARY = 2;
 
