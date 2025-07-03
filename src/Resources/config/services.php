@@ -135,6 +135,13 @@ return static function(ContainerConfigurator $container, ContainerBuilder $build
             ])
             ->tag(ImportExport\Event\BeforeImportRecordEvent::class)
 
+        ->set(ImportExport\Service\ProductVisibilityByStock::class)
+            ->args([
+                service('logger'),
+                service('product.repository'),
+            ])
+        ->tag(ImportExport\Event\BeforeImportRecordEvent::class)
+
         ->set(ImportExport\Service\EnrichCriteria::class)
             ->args([
                 inline_service(ImportExport\ProcessFactory::class)
