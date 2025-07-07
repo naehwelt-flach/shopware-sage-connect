@@ -139,6 +139,7 @@ return static function(ContainerConfigurator $container, ContainerBuilder $build
             ->args([
                 service('logger'),
                 service('product.repository'),
+                service(DataAbstractionLayer\Provider::class),
             ])
         ->tag(ImportExport\Event\BeforeImportRecordEvent::class)
 
