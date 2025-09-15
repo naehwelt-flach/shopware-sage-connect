@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Naehwelt\Shopware\Checkout;
 
-use Naehwelt\Shopware\DataAbstractionLayer\Provider;
-use Naehwelt\Shopware\ImportExport\Service\EnrichCriteria;
+use Naehwelt\Shopware\ImportExport\EventSubscriber;
+use Naehwelt\Shopware\ImportExport\ProcessFactory;
+use Naehwelt\Shopware\ImportExport\Service;
+use Naehwelt\Shopware\SageConnect;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Checkout\Cart\Cart;
 use Shopware\Core\Checkout\Order\Aggregate\OrderTransaction\OrderTransactionEntity;
@@ -27,8 +29,7 @@ class PaymentProcessorDecorator extends PaymentProcessor
      */
     public function __construct(
         readonly private PaymentProcessor $inner,
-        readonly private Provider $provider,
-        readonly private EnrichCriteria $enrichCriteria,
+        readonly private ProcessFactory $processFactory,
         readonly private LoggerInterface $logger,
     ) {
     }
@@ -42,7 +43,7 @@ class PaymentProcessorDecorator extends PaymentProcessor
                 'orderId' => $orderId,
             ];
             if (is_string($transactionId)) {
-                $transaction = $this->provider->entity(OrderTransactionEntity::class, $transactionId);
+                $transaction = $this->processFactory->provider->entity(OrderTransactionEntity::class, $transactionId);
                 $orderId = $transaction->getOrderId();
                 $context += [
                     'transactionUpdated' => $transaction->getUpdatedAt(),
@@ -50,7 +51,7 @@ class PaymentProcessorDecorator extends PaymentProcessor
                 ];
             }
             if ($orderId) {
-                $order = $this->provider->entity(OrderEntity::class, $orderId);
+                $order = $this->processFactory->provider->entity(OrderEntity::class, $orderId);
                 $context += [
                     'orderNumber' => $order->getOrderNumber(),
                     'orderDateTime' => $order->getOrderDateTime(),
@@ -59,11 +60,28 @@ class PaymentProcessorDecorator extends PaymentProcessor
             }
             $this->logger->info($msg, $context);
             if ($transactionId && $orderId) {
-                $this->enrichCriteria->sendMessage($order);
+                $this->createExportLog($order);
             }
         } catch (Throwable $error) {
             $this->logger->error($error->getMessage(), ['e' => $error]);
         }
+    }
+
+    private function createExportLog(OrderEntity $order): void
+    {
+        $this->processFactory->sendMessage(params: [
+            SageConnect::id() => [
+                EventSubscriber::ON_ENRICH_EXPORT_CRITERIA => [
+                    Service\EnrichCriteria::class => [['orderId' => $order->getId()]],
+                ],
+                EventSubscriber::ON_EXPORT_SUCCEEDED => [
+                    Service\CopyFile::class => [
+                        'rename' => "{$order->getOrderNumber()}-%s",
+                        'copy' => 'order/',
+                    ]
+                ]
+            ]
+        ]);
     }
 
     public function pay(

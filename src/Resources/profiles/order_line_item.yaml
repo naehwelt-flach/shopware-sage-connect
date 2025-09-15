@@ -6,10 +6,12 @@
   config:
     sage_connect:
       onEnrichExportCriteria:
-      ### for debugging
-      # EnrichCriteria:
+        EnrichCriteria:
       #   - orderId: 01949314e7eb7342877005679d8269cb
       #     type: product
+      onExportSucceeded:
+        CopyFile:
+          foo: bar
 
   mapping:
 

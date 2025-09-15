@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace Naehwelt\Shopware\ImportExport;
 
+use Naehwelt\Shopware\DataAbstractionLayer\Provider;
 use Naehwelt\Shopware\ImportExport\Serializer\PrimaryKeyResolver;
 use Naehwelt\Shopware\SageConnect;
 use Psr\Log\LoggerInterface;
+use Shopware\Core\Content\ImportExport\Aggregate\ImportExportLog\ImportExportLogEntity;
+use Shopware\Core\Content\ImportExport\Aggregate\ImportExportLog\ImportExportLogEvents;
 use Shopware\Core\Content\ImportExport\Event\EnrichExportCriteriaEvent;
 use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRecordEvent;
 use Shopware\Core\Content\ImportExport\Event\ImportExportBeforeImportRowEvent;
 use Shopware\Core\Content\ImportExport\Processing;
 use Shopware\Core\Content\ImportExport\Struct\Config;
+use Shopware\Core\Content\ImportExport\Struct\Progress;
+use Shopware\Core\Framework\DataAbstractionLayer\Event\EntityWrittenEvent;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Contracts\Service\ResetInterface;
 use Throwable;
@@ -21,10 +26,13 @@ class EventSubscriber implements ResetInterface
     public const ON_BEFORE_IMPORT_ROW = 'onBeforeImportRow';
     public const ON_BEFORE_IMPORT_RECORD = 'onBeforeImportRecord';
     public const ON_ENRICH_EXPORT_CRITERIA = 'onEnrichExportCriteria';
+    public const ON_IMPORT_SUCCEEDED = 'onImportSucceeded';
+    public const ON_EXPORT_SUCCEEDED = 'onExportSucceeded';
 
     private array $cache;
 
     public function __construct(
+        private readonly Provider $provider,
         private readonly PrimaryKeyResolver $primaryKeyResolver,
         private readonly array $services,
         private readonly LoggerInterface $logger,
@@ -69,11 +77,6 @@ class EventSubscriber implements ResetInterface
         }
     }
 
-    public static function params(string $on, string $service, array $params): array
-    {
-        return [SageConnect::id() => [$on => [$service => $params]]];
-    }
-
     #[AsEventListener]
     public function onBeforeImportRow(ImportExportBeforeImportRowEvent $event): void
     {
@@ -98,6 +101,31 @@ class EventSubscriber implements ResetInterface
         foreach ($this->services(Config::fromLog($event->getLogEntity()), self::ON_ENRICH_EXPORT_CRITERIA) as $service => $params) {
             $this->tryAndCatch(fn() => $service($event, $params));
         }
+    }
+
+    #[AsEventListener(event: ImportExportLogEvents::IMPORT_EXPORT_LOG_WRITTEN_EVENT)]
+    public function onLogWritten(EntityWrittenEvent $event): void
+    {
+        static $map = [
+            ImportExportLogEntity::ACTIVITY_IMPORT => self::ON_IMPORT_SUCCEEDED,
+            ImportExportLogEntity::ACTIVITY_EXPORT => self::ON_EXPORT_SUCCEEDED,
+        ];
+        $this->tryAndCatch(function () use ($event, $map) {
+            foreach ($event->getPayloads() as $payload) {
+                ['state' => $state, 'id' => $id] = $payload + ['state' => null, 'id' => null];
+                if (Progress::STATE_SUCCEEDED !== $state) {
+                    continue;
+                }
+                $log = $this->provider->entity(ImportExportLogEntity::class, $id);
+                if (!$log || !($tag = $map[$log->getActivity()] ?? null)) {
+                    continue;
+                }
+                $config = Config::fromLog($log);
+                foreach ($this->services($config, $tag) as $service => $params) {
+                    $this->tryAndCatch(fn() => $service($log, $params));
+                }
+            }
+        });
     }
 
     public function reset(): void

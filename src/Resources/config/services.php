@@ -121,11 +121,14 @@ return static function(ContainerConfigurator $container, ContainerBuilder $build
 
         ->set(ImportExport\EventSubscriber::class)
             ->args([
+                service(DataAbstractionLayer\Provider::class),
                 service(ImportExport\Serializer\PrimaryKeyResolver::class),
                 [...$taggedIterators(
                     ImportExport\EventSubscriber::ON_BEFORE_IMPORT_ROW,
                     ImportExport\EventSubscriber::ON_BEFORE_IMPORT_RECORD,
                     ImportExport\EventSubscriber::ON_ENRICH_EXPORT_CRITERIA,
+                    ImportExport\EventSubscriber::ON_IMPORT_SUCCEEDED,
+                    ImportExport\EventSubscriber::ON_EXPORT_SUCCEEDED,
                 )],
                 $logger,
             ])
@@ -143,16 +146,16 @@ return static function(ContainerConfigurator $container, ContainerBuilder $build
             ->tag(SageConnect::id(ImportExport\EventSubscriber::ON_BEFORE_IMPORT_RECORD))
 
         ->set(ImportExport\Service\EnrichCriteria::class)
-            ->args([
-                inline_service(ImportExport\ProcessFactory::class)
-                    ->factory([service(ImportExport\ProcessFactory::class), 'with'])
-                    ->args([
-                        ['technicalName' => param(SageConnect::ORDER_PLACED_PROFILE)],
-                        '+1 month'
-                    ]),
-                service(FileService::class),
-            ])
             ->tag(SageConnect::id(ImportExport\EventSubscriber::ON_ENRICH_EXPORT_CRITERIA))
+
+        ->set(ImportExport\Service\CopyFile::class)
+            ->args([
+                service(DataAbstractionLayer\Provider::class),
+                service(FileService::class),
+                service('shopware.filesystem.private'),
+                service(SageConnect::FS_PRIVATE)
+            ])
+            ->tag(SageConnect::id(ImportExport\EventSubscriber::ON_EXPORT_SUCCEEDED))
 
         ->set(FileService::class)
             ->class(ImportExport\FileService::class)
@@ -225,8 +228,12 @@ return static function(ContainerConfigurator $container, ContainerBuilder $build
             ->decorate(PaymentProcessor::class)
             ->args([
                 service('.inner'),
-                service(DataAbstractionLayer\Provider::class),
-                service(ImportExport\Service\EnrichCriteria::class),
+                inline_service(ImportExport\ProcessFactory::class)
+                    ->factory([service(ImportExport\ProcessFactory::class), 'with'])
+                    ->args([
+                        ['technicalName' => param(SageConnect::ORDER_PLACED_PROFILE)],
+                        '+1 month'
+                    ]),
                 $logger,
             ])
 
