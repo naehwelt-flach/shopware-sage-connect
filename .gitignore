@@ -3,6 +3,7 @@
 !/src/
 !/tests/
 !/.gitignore
+!/AGENTS.md
 !/composer.json
 !/LICENSE
 !/README.md
